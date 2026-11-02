@@ -27,7 +27,7 @@ async function clearActivities(){try{const db=await openDB();await new Promise((
 async function hydrate(){state.manual=await listSavedActivities();render();if('serviceWorker' in navigator && window.location.protocol==='https:'){try{await navigator.serviceWorker.register('./sw.js',{scope:'./'})}catch(e){console.warn('Service worker:',e)}}}
 function getStart(a){return new Date(a.start || a.date+'T12:00:00').getTime()}
 function hasDuplicate(candidate){const exact=state.manual.find(a=>a.sourceKey&&candidate.sourceKey&&a.sourceKey===candidate.sourceKey);if(exact)return exact;
- return state.manual.find(a=>a.type===candidate.type&&a.date===candidate.date&&
+ return state.manual.find(a=>!(a.type==='strength'&&candidate.type==='strength'&&(!!a.log!==!!candidate.log))&&a.type===candidate.type&&a.date===candidate.date&&
   Math.abs(getStart(a)-getStart(candidate))<=5*60*1000&&
   Math.abs((a.minutes||0)-(candidate.minutes||0))<8&&
   (a.distance==null||candidate.distance==null||Math.abs(a.distance-candidate.distance)<=Math.max(0.4,candidate.distance*0.06)))

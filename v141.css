@@ -1,0 +1,13 @@
+/* MOTION. V1.4.1 – strength linking */
+.strength-link-card{border:1px solid #f0ddc8}
+.strength-link-card .section-title{margin-top:8px;margin-bottom:8px}
+.strength-link-card .form-label{display:block;margin:14px 0}
+.link-source-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:14px}
+.link-source-grid>div{min-width:0;border:1px solid #f2e5d8;background:#fffaf4;border-radius:16px;padding:12px}
+.link-source-grid strong{display:block;font-size:12px;line-height:1.4}
+.link-source-grid small{display:block;color:#8d7968;font-size:11px;line-height:1.5;margin-top:5px}
+.sync-strength-match{margin:0 12px 12px;background:#fff7ef;border:1px solid #eddac6;padding:12px;border-radius:15px}
+.sync-strength-match strong{display:block;font-size:12px;color:#865738}
+.sync-strength-match p{font-size:11px;color:#987c65;line-height:1.5;margin:5px 0 9px}
+.sync-strength-match .search{margin:0;width:100%;background:#fff}
+@media(max-width:350px){.link-source-grid{grid-template-columns:1fr}}

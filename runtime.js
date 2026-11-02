@@ -1,8 +1,8 @@
 'use strict';
-/* MOTION. V1 local-first data layer. No API keys are persisted in the browser. */
+/* MOTION. V1 local-first data layer. Optional persistent WORKER access token is explicitly consented to by the device owner. Provider API keys never enter the browser. */
 const config = {
   url: localStorage.getItem('motion_worker_url') || '',
-  token: sessionStorage.getItem('motion_session_token') || ''
+  token: localStorage.getItem('motion_saved_worker_token') || sessionStorage.getItem('motion_session_token') || ''
 };
 const muscleInsights = {
   gluteMed: {why:'单腿支撑时帮助控制骨盆与股骨，是跑步、上下台阶和单腿训练中的重要稳定肌。',movement:'它可以将大腿向外侧抬起；在脚落地的支撑阶段，还参与控制骨盆侧倾和股骨运动。',attention:'单腿 RDL 时关注骨盆是否稳定；侧向髋外展时避免身体侧弯代偿。局部酸胀不是训练有效的唯一标准。'},
@@ -40,7 +40,34 @@ async function addActivity(item){if(!item||!item.type||!item.date||!Number.isFin
 }
 async function updateActivitySport(){const a=state.manual.find(a=>a.id===state.activityID),field=document.getElementById('activity-type');if(!a||!field)return;a.type=field.value;if(a.distance){const m=a.minutes/a.distance;a.pace=Math.floor(m)+':'+String(Math.round((m%1)*60)).padStart(2,'0');a.speed=Number((a.distance/(a.minutes/60)).toFixed(1))}await storeActivity(a);showOverlay();toast('已修改运动类型')}
 async function deleteSelectedActivity(){const a=state.manual.find(a=>a.id===state.activityID);if(!a||!confirm('删除「'+a.title+'」这条运动记录？'))return;state.manual=state.manual.filter(x=>x.id!==a.id);await removeSavedActivity(a.id);closeOverlay();toast('记录已删除')}
-function saveConfig(){const urlEl=document.querySelector('#worker-url'), tokEl=document.querySelector('#worker-token');if(urlEl)config.url=urlEl.value.trim().replace(/\/+$/,'');if(tokEl)config.token=tokEl.value.trim();localStorage.setItem('motion_worker_url',config.url);if(config.token)sessionStorage.setItem('motion_session_token',config.token);else sessionStorage.removeItem('motion_session_token');toast('连接配置已保存（口令仅本次会话有效）')}
+function saveConfig(){
+ const urlEl=document.querySelector('#worker-url'),tokEl=document.querySelector('#worker-token');
+ if(urlEl)config.url=urlEl.value.trim().replace(/\/+$/,'');
+ if(tokEl)config.token=tokEl.value.trim();
+ const remember=document.querySelector('#remember-worker-token')?.checked===true;
+ try{
+   localStorage.setItem('motion_worker_url',config.url);
+   if(remember && config.token){
+     localStorage.setItem('motion_saved_worker_token',config.token);
+     sessionStorage.removeItem('motion_session_token');
+   } else {
+     localStorage.removeItem('motion_saved_worker_token');
+     if(config.token)sessionStorage.setItem('motion_session_token',config.token);
+     else sessionStorage.removeItem('motion_session_token');
+   }
+   toast(remember&&config.token?'已记住访问口令，下次打开无需重复填写':'已保存连接配置（口令仅当前会话有效）');
+ }catch(e){
+   try{sessionStorage.setItem('motion_session_token',config.token)}catch{}
+   toast('本地保存不可用：本次会话仍可同步，请检查浏览器存储权限');
+ }
+}
+function forgetWorkerToken(){
+ try{localStorage.removeItem('motion_saved_worker_token');sessionStorage.removeItem('motion_session_token')}catch{}
+ config.token='';
+ const input=document.querySelector('#worker-token');if(input)input.value='';
+ const check=document.querySelector('#remember-worker-token');if(check)check.checked=false;
+ toast('本设备保存的访问口令已清除');
+}
 function openSync(){document.querySelector('#sync-sheet')?.remove();document.querySelector('.overlay')?.remove();state.overlay=null;const e=document.createElement('div');e.className='overlay sync-sheet';e.id='sync-sheet';e.innerHTML=`<button class="backlink" onclick="closeSync()">← 返回</button><div class="micro">MANUAL SYNC</div><h1 class="page-title">Sync your movement<span style="color:var(--green)">.</span></h1><p class="sub">只在点击时读取你的运动。Apple Watch 数据需先经 Companion 上传至 Intervals.icu。</p><div class="card p20" style="margin-top:21px"><div class="sync-provider"><span class="sync-dot">◉</span><div><strong>Apple Watch</strong><small>Intervals.icu · 跑步、网球与力量</small></div><span class="pill">API</span></div><div class="sync-provider"><span class="sync-dot">↗</span><div><strong>Garmin Connect</strong><small>个人 API · 骑行</small></div><span class="pill">API</span></div><div id="sync-status" class="helper" aria-live="polite" style="margin:17px 0">${config.url?'已配置 Worker 地址。':'先在「设置」中填写 Worker 地址和访问口令。'}</div><button class="primary" style="width:100%" id="sync-run" onclick="syncNow()">↻ 开始同步</button></div><div class="card p18" style="margin-top:16px"><div class="spread"><div><b>无需连接，也可导入</b><p class="helper">GPX、TCX、FIT 运动文件</p></div><button class="soft-btn" onclick="document.querySelector('#import-file').click()">导入文件</button></div></div><div class="notice section">MOTION. 不会定时查询账户。API 密钥存储在你部署的 Cloudflare Worker Secrets 中，运动数据留在当前浏览器。</div>`;document.querySelector('.app').append(e);e.scrollTop=0}
 function closeSync(){document.querySelector('#sync-sheet')?.remove();render()}
 async function callWorker(path,kind='json'){if(!config.url||!config.token)throw Error('先在「设置」中填写 Worker 地址和访问口令');const res=await fetch(config.url+path,{headers:{Authorization:'Bearer '+config.token},cache:'no-store'});if(!res.ok){let msg='HTTP '+res.status;try{let j=await res.json();msg=j.error||msg}catch{}throw Error(msg)}return kind==='buffer'?res.arrayBuffer():res.json()}

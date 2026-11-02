@@ -1,5 +1,5 @@
 // Cache only app shell, never authenticated API results or private health records.
-const CACHE='motion-shell-v1-4-1-20261102';const FILES=['./','./index.html','./styles.css','./theme.css','./v14.css','./v14.js','./v141.js','./v141.css','./runtime.js','./app.js','./assets/icon.svg','./assets/apple-touch-icon.png','./manifest.webmanifest'];
+const CACHE='motion-shell-v1-4-3-20261103';const FILES=['./','./index.html','./styles.css','./theme.css','./v14.css','./v14.js','./v141.js','./v141.css','./v142-atlas.css','./v142-atlas.js','./v142-3d.js','./runtime.js','./app.js','./assets/icon.svg','./assets/apple-touch-icon.png','./manifest.webmanifest'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',event=>{if(event.request.method!=='GET'||new URL(event.request.url).origin!==self.location.origin)return;event.respondWith(fetch(event.request).then(r=>{if(r.ok&&FILES.some(x=>new URL(x,self.registration.scope).href===event.request.url)){const copy=r.clone();caches.open(CACHE).then(c=>c.put(event.request,copy))}return r}).catch(()=>caches.match(event.request)))});

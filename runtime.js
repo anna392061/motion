@@ -88,10 +88,15 @@ async function fetchRoute(source,originalId){
 async function syncNow(){
  const el=document.querySelector('#sync-status'),btn=document.querySelector('#sync-run');if(!el||!btn)return;
  btn.disabled=true;btn.textContent='正在连接…';let added=0,duplicate=0,routed=0,errors=[];
+ let capabilities={intervals:true,garmin:true};
+ try{const health=await callWorker('/health');if(health.providers)capabilities=health.providers;}
+ catch(e){const status=document.querySelector('#sync-status');if(status)status.textContent='连接检查失败：'+e.message;btn.disabled=false;btn.textContent='↻ 重新尝试';return;}
  const first=!state.manual.some(a=>['Garmin Connect','Intervals.icu · Apple Health'].includes(a.source));
  const oldest=dateKey(new Date(Date.now()-(first?90:21)*864e5)),today=dateKey(new Date());
  let toEnrich=[];
- for(const [source,path] of [['intervals',`/sync/intervals?oldest=${oldest}&newest=${today}`],['garmin',`/sync/garmin?start=${oldest}&end=${today}`]]){
+ const providers=[['intervals',`/sync/intervals?oldest=${oldest}&newest=${today}`],['garmin',`/sync/garmin?start=${oldest}&end=${today}`]].filter(([source])=>capabilities[source]);
+ if(!providers.length){const status=document.querySelector('#sync-status');if(status)status.textContent='尚未配置任何数据来源。请在 Cloudflare Worker 中添加 INTERVALS_API_KEY。';btn.disabled=false;btn.textContent='↻ 重新尝试';return;}
+ for(const [source,path] of providers){
   const label=source==='intervals'?'Apple Watch':'Garmin';if(el)el.textContent=label+' · 正在获取新记录…';
   try{
    const data=await callWorker(path);const records=Array.isArray(data.activities)?data.activities:[];
@@ -108,7 +113,7 @@ async function syncNow(){
   try{const pts=await fetchRoute(task.source,task.id);if(pts?.length>1){task.item.routePoints=pts;task.item.route=true;await storeActivity(task.item);routed++}}catch(e){console.info('GPS route unavailable',task.source,task.id,e.message)}
  }
  render();const result=document.querySelector('#sync-status'),b=document.querySelector('#sync-run');
- if(result)result.innerHTML=`<b>同步完成 · 新增 ${added} 条</b><br>已存在 ${duplicate} 条 · 已获取 GPS 路线 ${routed} 条${errors.length?'<br><span style="color:#a33">'+errors.map(esc).join('<br>')+'</span>':''}<br><small>若某次运动没有路线，可以导入原始 GPX/TCX/FIT。</small>`;
+ if(result)result.innerHTML=`<b>同步完成 · 新增 ${added} 条</b><br>已存在 ${duplicate} 条 · 已获取 GPS 路线 ${routed} 条${!capabilities.garmin?'<br><small>Garmin 尚未配置，本次只同步 Apple Watch。</small>':''}${errors.length?'<br><span style="color:#a33">'+errors.map(esc).join('<br>')+'</span>':''}<br><small>若某次运动没有路线，可以导入原始 GPX/TCX/FIT。</small>`;
  if(b){b.disabled=false;b.textContent='↻ 再次同步'}
 }
 

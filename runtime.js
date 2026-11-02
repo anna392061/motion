@@ -33,7 +33,9 @@ function hasDuplicate(candidate){const exact=state.manual.find(a=>a.sourceKey&&c
   (a.distance==null||candidate.distance==null||Math.abs(a.distance-candidate.distance)<=Math.max(0.4,candidate.distance*0.06)))
 }
 async function addActivity(item){if(!item||!item.type||!item.date||!Number.isFinite(item.minutes))return 'skipped';
- const old=hasDuplicate(item);if(old){if(!old.routePoints?.length&&item.routePoints?.length){old.routePoints=item.routePoints;old.route=true;await storeActivity(old)}return 'duplicate'}
+ const old=hasDuplicate(item);if(old){let changed=false;for(const f of ['routePoints','hrSeries','altitudeSeries','paceSeries','splits','gain','cal','distance','hr']){
+  const val=item[f];if((old[f]===undefined||old[f]===null||(Array.isArray(old[f])&&!old[f].length))&&val!==undefined&&val!==null){old[f]=val;changed=true}
+ }if(item.routePoints?.length&&!old.route){old.route=true;changed=true}if(changed)await storeActivity(old);return 'duplicate'}
  state.manual.push(item);await storeActivity(item);return 'added';
 }
 async function updateActivitySport(){const a=state.manual.find(a=>a.id===state.activityID),field=document.getElementById('activity-type');if(!a||!field)return;a.type=field.value;if(a.distance){const m=a.minutes/a.distance;a.pace=Math.floor(m)+':'+String(Math.round((m%1)*60)).padStart(2,'0');a.speed=Number((a.distance/(a.minutes/60)).toFixed(1))}await storeActivity(a);showOverlay();toast('已修改运动类型')}
@@ -52,9 +54,10 @@ function normalizedRecord(raw,source){const type=classify(raw,source);if(!type)r
  const mins=seconds/60;if(!Number.isFinite(mins)||mins<=0||mins>10000)return null;
  const distM=Number(raw.distance??raw.distanceInMeters??0),d=distM>0?Number((distM/1000).toFixed(2)):null;
  const hr=Number(raw.average_heartrate??raw.averageHeartRate??raw.averageHR??raw.avgHr??raw.average_hr??0)||null;
- const gain=Number(raw.total_elevation_gain??raw.elevationGain??raw.totalAscent??0);
+ const gainRaw=raw.total_elevation_gain??raw.elevationGain??raw.totalAscent;const gain=gainRaw==null?null:Number(gainRaw);
+ const kcalRaw=raw.calories??raw.icu_calories??raw.total_calories??raw.active_calories;const cal=kcalRaw==null?null:Number(kcalRaw);
  const ident=String(raw.id??raw.activityId??raw.activity_id??(start+'-'+raw.name));
- const item={id:source+'-'+ident,sourceKey:source+':'+ident,source:source==='intervals'?'Intervals.icu · Apple Health':'Garmin Connect',date,type,start,title:String(raw.name||raw.activityName||sport[type].zh+'运动'),minutes:Math.round(mins*10)/10,distance:d,hr,gain:gain||null};
+ const item={id:source+'-'+ident,sourceKey:source+':'+ident,source:source==='intervals'?'Intervals.icu · Apple Health':'Garmin Connect',date,type,start,title:String(raw.name||raw.activityName||sport[type].zh+'运动'),minutes:Math.round(mins*10)/10,duration:seconds>=3600?`${Math.floor(seconds/3600)}:${String(Math.floor(seconds%3600/60)).padStart(2,'0')}:${String(Math.round(seconds%60)).padStart(2,'0')}`:`${Math.floor(seconds/60)}:${String(Math.round(seconds%60)).padStart(2,'0')}`,distance:d,hr,gain:Number.isFinite(gain)?gain:null,cal:Number.isFinite(cal)&&cal>=0?cal:null};
  if(d&&type==='run'){let pace=mins/d;item.pace=Math.floor(pace)+':'+String(Math.round((pace%1)*60)).padStart(2,'0')}if(d&&type==='cycle')item.speed=Number((d/(mins/60)).toFixed(1));
  if(raw.routePoints?.length)item.routePoints=raw.routePoints;
  return item;
@@ -85,35 +88,86 @@ async function fetchRoute(source,originalId){
  const bytes=await callWorker('/sync/garmin/fit?id='+encodeURIComponent(originalId),'buffer');
  const fit=await zipFitData(bytes);return parseFITBytes(fit,'garmin.fit').routePoints;
 }
+// Intervals.icu streams.json is an array of {type,data}; no inferred/simulated sensor samples.
+function parseIntervalStreams(raw){
+ const arr=Array.isArray(raw)?raw:Array.isArray(raw?.streams)?raw.streams:[];
+ const get=(name)=>{const found=arr.find(x=>String(x.type||x.name||'').toLowerCase()===name);return Array.isArray(found?.data)?found.data:[]};
+ const times=get('time'),hr=get('heartrate'),distance=get('distance'),altitude=get('altitude'),velocity=get('velocity_smooth'),cadence=get('cadence');
+ const x=i=>Number.isFinite(Number(times[i]))?Number(times[i]):i;
+ const decimate=(v,limit=400)=>{let out=[];const step=Math.max(1,Math.ceil(v.length/limit));for(let i=0;i<v.length;i+=step){const value=Number(v[i]);if(v[i]!=null&&Number.isFinite(value))out.push([x(i),value])}return out};
+ return {hrSeries:decimate(hr),altitudeSeries:decimate(altitude),speedSeries:decimate(velocity),cadenceSeries:decimate(cadence),splits:calcKmSplits(times,distance)};
+}
+function calcKmSplits(times,dist){
+ if(!Array.isArray(dist)||dist.length<2)return [];
+ const elapsed=i=>Number.isFinite(Number(times?.[i]))?Number(times[i]):i;
+ const splits=[];let prevT=elapsed(0),prevD=Number(dist[0])||0,mark=Math.ceil(Math.max(0,prevD)/1000)*1000;if(mark===0)mark=1000;
+ let lastCross=prevT;
+ for(let i=1;i<dist.length;i++){
+  const d=Number(dist[i]),t=elapsed(i);if(!Number.isFinite(d)||!Number.isFinite(t))continue;
+  while(d>=mark&&prevD<mark&&splits.length<80){
+   const cross=prevT+(t-prevT)*(mark-prevD)/(d-prevD);const seconds=cross-lastCross;
+   if(seconds>0)splits.push({km:Math.round(mark/1000),distanceKm:1,seconds:Math.round(seconds),pace:fmtPace(seconds)});
+   lastCross=cross;mark+=1000;
+  }
+  prevT=t;prevD=d;
+ }
+ const lastDistance=Number(dist.at(-1))||0,lastTime=elapsed(dist.length-1),remain=lastDistance-(mark-1000);
+ if(remain>20&&lastTime>lastCross&&splits.length<80){const seconds=lastTime-lastCross,pace=seconds/(remain/1000);splits.push({km:Math.ceil(lastDistance/1000),distanceKm:Number((remain/1000).toFixed(2)),seconds:Math.round(seconds),pace:fmtPace(pace)})}
+ return splits;
+}
+function fmtPace(sec){const n=Math.max(0,Math.round(sec));return `${Math.floor(n/60)}:${String(n%60).padStart(2,'0')}`}
+async function enrichIntervals(item,id){
+ let did=false;
+ if(!item.detailChecked){
+  try{const detail=await callWorker('/sync/intervals/detail?id='+encodeURIComponent(id));
+   const d=normalizedRecord(detail,'intervals');if(d){for(const f of ['gain','cal','hr','distance','pace','speed','duration'])if(d[f]!=null)item[f]=d[f];if(d.minutes>0)item.minutes=d.minutes}
+   item.detailChecked=true;did=true;
+  }catch(e){console.info('Intervals activity detail unavailable',id,e.message)}
+ }
+ if(!item.streamsChecked){
+  try{const data=await callWorker('/sync/intervals/streams?id='+encodeURIComponent(id));
+   const streams=parseIntervalStreams(data);for(const [key,value] of Object.entries(streams))if(value?.length)item[key]=value;
+   item.streamsChecked=true;did=true;
+  }catch(e){console.info('Intervals streams unavailable',id,e.message)}
+ }
+ if(!item.routePoints?.length){
+  try{const pts=await fetchRoute('intervals',id);if(pts?.length>1){item.routePoints=pts;item.route=true;did=true}}
+  catch(e){console.info('Intervals route unavailable',id,e.message)}
+ }
+ if(did)await storeActivity(item);
+ return did;
+}
 async function syncNow(){
  const el=document.querySelector('#sync-status'),btn=document.querySelector('#sync-run');if(!el||!btn)return;
- btn.disabled=true;btn.textContent='正在连接…';let added=0,duplicate=0,routed=0,errors=[];
+ btn.disabled=true;btn.textContent='正在连接…';let added=0,duplicate=0,routed=0,enriched=0,errors=[];
  let capabilities={intervals:true,garmin:true};
  try{const health=await callWorker('/health');if(health.providers)capabilities=health.providers;}
- catch(e){const status=document.querySelector('#sync-status');if(status)status.textContent='连接检查失败：'+e.message;btn.disabled=false;btn.textContent='↻ 重新尝试';return;}
+ catch(e){el.textContent='连接检查失败：'+e.message;btn.disabled=false;btn.textContent='↻ 重新尝试';return;}
  const first=!state.manual.some(a=>['Garmin Connect','Intervals.icu · Apple Health'].includes(a.source));
- const oldest=dateKey(new Date(Date.now()-(first?90:21)*864e5)),today=dateKey(new Date());
- let toEnrich=[];
+ const oldest=dateKey(new Date(Date.now()-(first?90:21)*864e5)),today=dateKey(new Date()),toEnrich=[];
  const providers=[['intervals',`/sync/intervals?oldest=${oldest}&newest=${today}`],['garmin',`/sync/garmin?start=${oldest}&end=${today}`]].filter(([source])=>capabilities[source]);
- if(!providers.length){const status=document.querySelector('#sync-status');if(status)status.textContent='尚未配置任何数据来源。请在 Cloudflare Worker 中添加 INTERVALS_API_KEY。';btn.disabled=false;btn.textContent='↻ 重新尝试';return;}
+ if(!providers.length){el.textContent='尚未配置数据来源。';btn.disabled=false;btn.textContent='↻ 重新尝试';return;}
  for(const [source,path] of providers){
-  const label=source==='intervals'?'Apple Watch':'Garmin';if(el)el.textContent=label+' · 正在获取新记录…';
-  try{
-   const data=await callWorker(path);const records=Array.isArray(data.activities)?data.activities:[];
+  const label=source==='intervals'?'Apple Watch':'Garmin';el.textContent=label+' · 正在获取记录…';
+  try{const data=await callWorker(path);const records=Array.isArray(data.activities)?data.activities:[];
    for(const row of records){const item=normalizedRecord(row,source);if(!item)continue;
-    const old=hasDuplicate(item);if(!old){const outcome=await addActivity(item);if(outcome==='added'){added++;if(item.type==='run'||item.type==='cycle')toEnrich.push({item,source,id:String(row.id??row.activityId??row.activity_id)})}}
-    else{duplicate++;if(!old.routePoints?.length&&(item.type==='run'||item.type==='cycle'))toEnrich.push({item:old,source,id:String(row.id??row.activityId??row.activity_id)})}
+    const old=hasDuplicate(item),target=old||item,ident=String(row.id??row.activityId??row.activity_id);
+    if(!old){if((await addActivity(item))==='added')added++}else duplicate++;
+    if(source==='intervals'&&(!target.streamsChecked||!target.detailChecked||!target.routePoints?.length))toEnrich.push({item:target,source,id:ident});
+    if(source==='garmin'&&!target.routePoints?.length&&(target.type==='run'||target.type==='cycle'))toEnrich.push({item:target,source,id:ident});
    }
    if(data.warning)errors.push(label+': '+data.warning);
   }catch(e){errors.push(label+': '+e.message)}
  }
- // Route downloads are intentionally capped per click; later Sync calls can fill older routes.
- for(const task of toEnrich.slice(0,8)){
-  if(el)el.textContent='正在补充 GPS 路线 · '+task.item.title;
-  try{const pts=await fetchRoute(task.source,task.id);if(pts?.length>1){task.item.routePoints=pts;task.item.route=true;await storeActivity(task.item);routed++}}catch(e){console.info('GPS route unavailable',task.source,task.id,e.message)}
+ // Re-enrich old records too; upgrades do not create duplicate activities.
+ for(const task of toEnrich.slice(0,12)){
+  el.textContent='正在补充运动详情 · '+task.item.title;
+  if(task.source==='intervals'){
+   try{if(await enrichIntervals(task.item,task.id))enriched++;if(task.item.routePoints?.length)routed++}catch(e){errors.push('运动详情：'+e.message)}
+  }else try{const pts=await fetchRoute(task.source,task.id);if(pts?.length>1){task.item.routePoints=pts;task.item.route=true;await storeActivity(task.item);routed++}}catch(e){console.info('GPS route unavailable',e.message)}
  }
  render();const result=document.querySelector('#sync-status'),b=document.querySelector('#sync-run');
- if(result)result.innerHTML=`<b>同步完成 · 新增 ${added} 条</b><br>已存在 ${duplicate} 条 · 已获取 GPS 路线 ${routed} 条${!capabilities.garmin?'<br><small>Garmin 尚未配置，本次只同步 Apple Watch。</small>':''}${errors.length?'<br><span style="color:#a33">'+errors.map(esc).join('<br>')+'</span>':''}<br><small>若某次运动没有路线，可以导入原始 GPX/TCX/FIT。</small>`;
+ if(result)result.innerHTML=`<b>同步完成 · 新增 ${added} 条</b><br>已有 ${duplicate} 条 · 更新详情 ${enriched} 条 · GPS 路线 ${routed} 条${!capabilities.garmin?'<br><small>Garmin 尚未配置。</small>':''}${errors.length?'<br><span style="color:#a33">'+errors.map(esc).join('<br>')+'</span>':''}<br><small>已存在的跑步也会补充心率曲线和分段数据；未提供的数据保持空白。</small>`;
  if(b){b.disabled=false;b.textContent='↻ 再次同步'}
 }
 
@@ -121,11 +175,42 @@ function coordsSvg(points){const arr=points.filter(p=>Array.isArray(p)&&Number.i
  const lat=arr.map(p=>p[0]),lon=arr.map(p=>p[1]),loX=Math.min(...lon),hiX=Math.max(...lon),loY=Math.min(...lat),hiY=Math.max(...lat),spanX=Math.max((hiX-loX)*Math.cos(((loY+hiY)/2)*Math.PI/180),.00001),spanY=Math.max(hiY-loY,.00001),scale=Math.min(320/spanX,178/spanY);const cx=(loX+hiX)/2,cy=(loY+hiY)/2,cos=Math.cos(cy*Math.PI/180),plot=p=>[(220+(p[1]-cx)*cos*scale).toFixed(1),(115-(p[0]-cy)*scale).toFixed(1)],list=arr.map(plot),path=list.map((p,i)=>(i?'L':'M')+p.join(' ')).join(' ');
  return `<svg class="route-vector" viewBox="0 0 440 230" aria-label="从 GPS 坐标生成的真实运动路线"><defs><pattern id="mapGrid" width="26" height="26" patternUnits="userSpaceOnUse"><path d="M26 0H0V26" fill="none" stroke="#e7d6d9" stroke-width=".6"/></pattern></defs><rect width="440" height="230" rx="16" fill="#f7f0ed"/><rect width="440" height="230" fill="url(#mapGrid)"/><path d="${path}" fill="none" stroke="#fff" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/><path d="${path}" fill="none" stroke="#bd6685" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="${list[0][0]}" cy="${list[0][1]}" r="6" fill="#6d9b88" stroke="white" stroke-width="3"/><circle cx="${list.at(-1)[0]}" cy="${list.at(-1)[1]}" r="6" fill="#c76583" stroke="white" stroke-width="3"/></svg>`
 }
-function routeMapHtml(a){if(!a.routePoints||a.routePoints.length<2)return `<div class="no-route">⌁　当前运动没有可用的 GPS 轨迹<br><small>可以尝试导入 GPX / TCX / FIT 文件补充路线</small></div>`;return `<div class="map-box real-route"><div id="map-canvas" style="height:230px;display:none"></div><div id="map-fallback">${coordsSvg(a.routePoints)}</div><span class="map-label">GPS TRACK · ${a.routePoints.length} points</span></div>`}
-let leafMap=null;
-function initializeRouteMap(){const el=document.getElementById('map-canvas'),act=state.manual.find(a=>a.id===state.activityID);if(!el||!act?.routePoints?.length||!window.L)return;
- try{if(leafMap){leafMap.remove();leafMap=null}el.style.display='block';const fallback=document.querySelector('#map-fallback');if(fallback)fallback.style.display='none';leafMap=L.map(el,{zoomControl:false,attributionControl:true,scrollWheelZoom:false});L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap contributors',maxZoom:19}).addTo(leafMap);const line=L.polyline(act.routePoints,{color:'#b96182',weight:4}).addTo(leafMap);L.circleMarker(act.routePoints[0],{radius:5,color:'#729f88',fillColor:'#729f88'}).addTo(leafMap);L.circleMarker(act.routePoints.at(-1),{radius:5,color:'#b96182',fillColor:'#b96182'}).addTo(leafMap);leafMap.fitBounds(line.getBounds(),{padding:[20,20],maxZoom:15});setTimeout(()=>leafMap?.invalidateSize(),160)}catch(e){console.warn(e);el.style.display='none';document.querySelector('#map-fallback').style.display='block'}
+function graphSVG(points,title,unit,color='#b96182'){
+ const clean=(points||[]).filter(p=>Array.isArray(p)&&Number.isFinite(p[0])&&Number.isFinite(p[1]));
+ if(clean.length<2)return '';
+ const vals=clean.map(p=>p[1]),min=Math.min(...vals),max=Math.max(...vals),ylo=Math.floor(min-(max-min)*.15),yhi=Math.ceil(max+(max-min)*.15)||ylo+1;
+ const xlo=clean[0][0],xhi=clean.at(-1)[0],W=340,H=130,m=14;
+ const px=x=>m+((x-xlo)/(xhi-xlo||1))*(W-2*m),py=y=>H-m-((y-ylo)/(yhi-ylo||1))*(H-2*m);
+ const path=clean.map((p,i)=>(i?'L':'M')+px(p[0]).toFixed(1)+','+py(p[1]).toFixed(1)).join(' ');
+ const avg=Math.round(vals.reduce((a,b)=>a+b,0)/vals.length);
+ return `<div class="card p18 section metric-chart"><div class="micro">${title}</div><p class="chart-caption">平均 ${avg} ${unit} · 范围 ${Math.round(min)}–${Math.round(max)} ${unit}</p><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${title}真实数据曲线"><line x1="${m}" x2="${W-m}" y1="${H-m}" y2="${H-m}" stroke="#ead7e1"/><path d="${path}" fill="none" stroke="${color}" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg><div class="chart-labels"><span>开始</span><span>约 ${Math.round((xhi-xlo)/60)} 分钟</span></div></div>`;
 }
+function splitsHtml(splits){if(!splits?.length)return '';
+ return `<section class="section"><h2 class="section-title">每公里配速</h2><div class="card p18" style="margin-top:12px"><div class="split-head"><span>公里</span><span>距离</span><span>时间</span><span>平均配速</span></div>${splits.map(s=>`<div class="split-row"><strong>${s.km}</strong><span>${s.distanceKm.toFixed(2)} km</span><span>${fmtPace(s.seconds)}</span><strong>${esc(s.pace)}/km</strong></div>`).join('')}</div></section>`;
+}
+function routeMapHtml(a){if(!a.routePoints||a.routePoints.length<2)return `<div class="no-route">⌁　当前运动没有可用的 GPS 轨迹<br><small>可以尝试导入 GPX / TCX / FIT 文件补充路线</small></div>`;return `<div class="map-box real-route"><div id="map-canvas" style="width:100%;height:100%;display:none"></div><div id="map-fallback">${coordsSvg(a.routePoints)}</div><span class="map-label">GPS TRACK · ${a.routePoints.length} points</span></div>`}
+let leafMap=null;
+function initializeRouteMap(){
+ const el=document.getElementById('map-canvas'),act=state.manual.find(a=>a.id===state.activityID);
+ if(!el||!act?.routePoints?.length||!window.L)return;
+ try{
+  if(leafMap){leafMap.remove();leafMap=null}
+  el.style.display='block';el.style.height='100%';el.style.width='100%';
+  const fallback=document.querySelector('#map-fallback');
+  leafMap=L.map(el,{zoomControl:true,attributionControl:true,scrollWheelZoom:false,preferCanvas:true});
+  const tiles=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap contributors',maxZoom:19});
+  tiles.on('load',()=>{if(fallback)fallback.style.display='none'});
+  tiles.on('tileerror',()=>{if(fallback)fallback.style.display='block'});
+  tiles.addTo(leafMap);
+  const line=L.polyline(act.routePoints,{color:'#b96182',weight:5,opacity:.96}).addTo(leafMap);
+  L.circleMarker(act.routePoints[0],{radius:6,color:'#ffffff',weight:2,fillColor:'#72a48d',fillOpacity:1}).addTo(leafMap);
+  L.circleMarker(act.routePoints.at(-1),{radius:6,color:'#ffffff',weight:2,fillColor:'#ba5b7e',fillOpacity:1}).addTo(leafMap);
+  const fit=()=>{if(leafMap&&el.isConnected&&el.clientWidth>0){leafMap.invalidateSize({pan:false});leafMap.fitBounds(line.getBounds(),{padding:[26,26],maxZoom:17,animate:false})}};
+  requestAnimationFrame(()=>requestAnimationFrame(fit));setTimeout(fit,260);setTimeout(fit,900);
+  if(typeof ResizeObserver!=='undefined'){const ro=new ResizeObserver(()=>{if(el.isConnected)leafMap?.invalidateSize({pan:false});else ro.disconnect()});ro.observe(el)}
+ }catch(e){console.warn('Map unavailable; coordinate-vector fallback retained',e);el.style.display='none';const fallback=document.querySelector('#map-fallback');if(fallback)fallback.style.display='block'}
+}
+
 function pointDistance(a,b){const rad=Math.PI/180,R=6371000,dlat=(b[0]-a[0])*rad,dlon=(b[1]-a[1])*rad;const x=Math.sin(dlat/2)**2+Math.cos(a[0]*rad)*Math.cos(b[0]*rad)*Math.sin(dlon/2)**2;return 2*R*Math.asin(Math.min(1,Math.sqrt(x)))}
 function uniqueID(){return (crypto.randomUUID?.()||Date.now()+'-'+Math.random().toString(36).slice(2))}
 function parseGPX(text,name){const doc=new DOMParser().parseFromString(text,'application/xml');if(doc.querySelector('parsererror'))throw Error('GPX XML 无法解析');const pts=[...doc.getElementsByTagName('trkpt')];if(!pts.length)throw Error('找不到 GPX 轨迹点');const arr=pts.map(n=>{const lat=Number(n.getAttribute('lat')),lon=Number(n.getAttribute('lon'));const time=n.getElementsByTagName('time')[0]?.textContent;const hrNode=[...n.getElementsByTagName('*')].find(e=>e.localName?.toLowerCase()==='hr');return {pos:[lat,lon],time:time?Date.parse(time):NaN,hr:hrNode?Number(hrNode.textContent):0}}).filter(p=>p.pos.every(Number.isFinite));return trackToActivity(arr,name,'gpx')}

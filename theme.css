@@ -17,3 +17,16 @@ html{background:#f3e8ed}body{background:radial-gradient(ellipse at 20% 6%,#f3dfe
 .nav{background:rgba(255,246,250,.84);backdrop-filter:blur(26px) saturate(140%);-webkit-backdrop-filter:blur(26px) saturate(140%);border-top:1px solid rgba(255,255,255,.94);box-shadow:0 -8px 30px rgba(144,95,119,.055)}.nav button{color:#b49aa9}.nav button.active{color:#a45d82}.overlay{background:linear-gradient(155deg,#fcf4f7,#faf7f6)!important}.notice{background:#f9eaf1!important;border-color:#f5dce7!important;color:#926c83!important}.empty-note{background:#fcf5f9;border-color:#eadbe4;color:#987d8b;padding:27px 15px;line-height:1.8}.empty-note b{color:#704b61}.helper{color:#9b8492!important;line-height:1.75}.plan-index{background:#f3e3eb!important;color:#a65d82!important}
 .sync-provider{display:flex;gap:14px;align-items:center;padding:14px 0;border-bottom:1px solid #f1e2e9}.sync-provider:last-child{border:0}.sync-provider div{flex:1}.sync-provider strong,.sync-provider small{display:block}.sync-provider small{font-size:11px;color:#a48999;margin-top:5px}.sync-dot{background:#fae6ef;color:#a96589;width:39px;height:39px;border-radius:13px;display:grid;place-items:center;font-size:21px}.form-label{display:block;font-size:11px;font-weight:750;color:#9b7288;margin:16px 0}.form-label .search{width:100%;margin:6px 0;padding:13px 12px}.sync-sheet .primary:disabled{opacity:.55;cursor:progress}
 @media(min-width:500px){.app{border:1px solid #ffffffaa}.overlay{border-radius:25px}.nav{border-radius:0 0 28px 28px}}
+
+/* V1.2 map stability and real stream charts */
+.real-route{height:330px!important;min-height:330px;position:relative;isolation:isolate}
+.real-route #map-canvas{position:absolute;inset:0;width:100%!important;height:100%!important;z-index:2}
+.real-route #map-fallback{position:absolute;inset:0;width:100%;height:100%;z-index:3;pointer-events:none;background:#faf2f6}
+.real-route .map-label{z-index:500;pointer-events:none}
+.real-route .route-vector{width:100%;height:100%;object-fit:contain}
+.real-route .leaflet-container{width:100%;height:100%;font-family:inherit;background:#f8ebf2}
+.metric-chart svg{width:100%;height:auto;overflow:visible}
+.chart-caption{margin-top:13px;font-size:13px;font-weight:650;color:#81566e}
+.chart-labels{display:flex;justify-content:space-between;color:#aa8a9e;font-size:10px;margin-top:4px}
+.split-head,.split-row{display:grid;grid-template-columns:.5fr 1fr 1fr 1.25fr;gap:5px;text-align:right;align-items:center;padding:11px 0;border-bottom:1px solid #eedee6;font-size:12px}
+.split-head{color:#a98b9c;font-size:10px}.split-row:last-child{border:0}.split-row strong{color:#865571}

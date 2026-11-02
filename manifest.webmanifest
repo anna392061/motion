@@ -1,1 +1,18 @@
-{"name":"MOTION. — Personal Movement","short_name":"MOTION.","description":"Your personal movement archive","start_url":"./index.html","scope":"./","display":"standalone","background_color":"#f9ecf0","theme_color":"#f8e9ee","icons":[{"src":"./assets/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]}
+{
+  "name": "MOTION. — Personal Movement",
+  "short_name": "MOTION.",
+  "description": "MOTION. • Personal running, cycling, strength and tennis archive",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#fffaf6",
+  "theme_color": "#ffe0c9",
+  "icons": [
+    {
+      "src": "./assets/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

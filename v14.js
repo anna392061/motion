@@ -56,7 +56,18 @@ activityOverlay=function(){let html=activityBeforeV14();const a=state.manual.fin
 if(a.type==='run')extras+=shoePickerForActivity(a);
 if(a.paceSeries?.length>1)extras+=graphSVG(a.paceSeries,'PACE · 配速','sec/km','#c57741');
 if(a.type==='cycle'&&a.speedSeries?.length>1)extras+=graphSVG(a.speedSeries.map(p=>[p[0],p[1]*3.6]),'SPEED · 速度','km/h','#c57741');
-if(a.cadenceSeries?.length>1)extras+=graphSVG(a.cadenceSeries,'CADENCE · 踏频','rpm','#a27f5f');
+if(a.cadenceSeries?.length>1&&(a.type==='run'||a.type==='cycle')){
+  // Intervals.icu and raw Garmin FIT cadence represent one-leg strides/revolutions
+  // per minute. Running step cadence counts BOTH feet (spm); cycling stays rpm.
+  // Conversion is display-only; never modify stored cadenceSeries or backups.
+  const isRunning=a.type==='run';
+  const cadencePoints=isRunning
+    ? a.cadenceSeries.map(p=>[p[0],p[1]*2])
+    : a.cadenceSeries;
+  extras+=graphSVG(cadencePoints,
+    isRunning?'RUNNING CADENCE · 步频':'CYCLING CADENCE · 踏频',
+    isRunning?'步/分钟':'rpm','#a27f5f');
+}
 if(a.powerSeries?.length>1)extras+=graphSVG(a.powerSeries,'POWER · 功率','W','#a67b60');
 if(a.type==='cycle'&&a.cal!=null)extras+=`<section class="card p18 section"><div class="micro">ACTIVE CALORIES</div><h2>${Math.round(a.cal)} kcal</h2></section>`;
 if(a.type==='cycle'&&Number.isFinite(a.power))extras+=`<section class="card p18 section"><div class="micro">AVERAGE POWER</div><h2>${a.power} W</h2></section>`;

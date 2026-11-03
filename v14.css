@@ -45,3 +45,11 @@ html{background:#fcf4ec}body{color:var(--text);background:linear-gradient(175deg
 .leaflet-tile{visibility:hidden;filter:inherit}.leaflet-tile-loaded{visibility:inherit}.leaflet-container img,.leaflet-container .leaflet-pane>svg{max-width:none!important;max-height:none!important}.leaflet-container .leaflet-overlay-pane svg{user-select:none}.leaflet-zoom-animated{transform-origin:0 0}.leaflet-zoom-hide{visibility:hidden}
 .leaflet-control{position:relative;z-index:800;pointer-events:visiblePainted}.leaflet-top,.leaflet-bottom{position:absolute;z-index:1000;pointer-events:none}.leaflet-top{top:0}.leaflet-right{right:0}.leaflet-bottom{bottom:0}.leaflet-left{left:0}.leaflet-control-container .leaflet-control{pointer-events:auto}.leaflet-top .leaflet-control{margin-top:10px}.leaflet-left .leaflet-control{margin-left:10px}.leaflet-bottom .leaflet-control{margin-bottom:10px}.leaflet-right .leaflet-control{margin-right:10px}
 .leaflet-bar{box-shadow:0 2px 9px #5d3c2b26;border-radius:8px;overflow:hidden;background:#fff}.leaflet-bar a{display:block;width:30px;height:30px;line-height:30px;text-align:center;text-decoration:none;color:#79563c;background:#fff;font-weight:700;font-size:19px}.leaflet-bar a+a{border-top:1px solid #e9ded4}.leaflet-control-attribution{font-size:8px;background:#ffffffb0;padding:2px 4px}.leaflet-container a{color:#9b6742}.leaflet-interactive{cursor:pointer}.leaflet-touch .leaflet-bar a{width:30px;height:30px;line-height:30px}
+
+/* Editorial basemap: GPS track over low-contrast linework. Original GPS and all data stay intact. */
+.real-route .maplibregl-map{background:#fbf6ed!important}
+.real-route .maplibregl-canvas{outline:none}
+.real-route .maplibregl-ctrl-attrib{font-size:9px;color:#887e71;background:rgba(255,250,242,.88)!important}
+.real-route .maplibregl-ctrl-attrib a{color:#80705c}
+.real-route .maplibregl-ctrl-group{box-shadow:none;border:1px solid #e9d5c2}
+.real-route .map-label{display:none}

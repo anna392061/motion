@@ -216,26 +216,82 @@ function splitsHtml(splits){if(!splits?.length)return '';
  return `<section class="section"><h2 class="section-title">每公里配速</h2><div class="card p18" style="margin-top:12px"><div class="split-head"><span>公里</span><span>距离</span><span>时间</span><span>平均配速</span></div>${splits.map(s=>`<div class="split-row"><strong>${s.km}</strong><span>${s.distanceKm.toFixed(2)} km</span><span>${fmtPace(s.seconds)}</span><strong>${esc(s.pace)}/km</strong></div>`).join('')}</div></section>`;
 }
 function routeMapHtml(a){if(!a.routePoints||a.routePoints.length<2)return `<div class="no-route">⌁　当前运动没有可用的 GPS 轨迹<br><small>可以尝试导入 GPX / TCX / FIT 文件补充路线</small></div>`;return `<div class="map-box real-route"><div id="map-canvas" style="width:100%;height:100%;display:none"></div><div id="map-fallback">${coordsSvg(a.routePoints)}</div><span class="map-label">GPS TRACK · ${a.routePoints.length} points</span></div>`}
-let leafMap=null;
+// Art-map mode: render real GPS points over a quiet vector basemap, never an invented illustration.
+// If MapLibre or vector tiles are unavailable, preserve the lightweight Leaflet / SVG fallback.
+let routeMapInstance=null;
 function initializeRouteMap(){
- const el=document.getElementById('map-canvas'),act=state.manual.find(a=>a.id===state.activityID);
- if(!el||!act?.routePoints?.length||!window.L)return;
+ const el=document.getElementById('map-canvas'),fallback=document.getElementById('map-fallback');
+ const act=state.manual.find(a=>a.id===state.activityID);
+ if(routeMapInstance){try{routeMapInstance.remove()}catch(e){}routeMapInstance=null}
+ if(!el||!act?.routePoints?.length)return;
+ const points=act.routePoints.filter(p=>Array.isArray(p)&&p.length>=2&&Number.isFinite(Number(p[0]))&&Number.isFinite(Number(p[1]))&&Math.abs(p[0])<=90&&Math.abs(p[1])<=180);
+ if(points.length<2)return;
+ const showFallback=()=>{if(fallback)fallback.style.display='block';el.style.display='none'};
+ const showCanvas=()=>{el.style.display='block';el.style.width='100%';el.style.height='100%'};
+ const coords=points.map(p=>[Number(p[1]),Number(p[0])]);
+ const bbox=[Math.min(...coords.map(p=>p[0])),Math.min(...coords.map(p=>p[1])),Math.max(...coords.map(p=>p[0])),Math.max(...coords.map(p=>p[1]))];
+ // Avoid a large full-world rectangle when the GPS contains a few stray points.
+ const lineData={type:'Feature',properties:{},geometry:{type:'LineString',coordinates:coords}};
+ function leafletFallback(){
+   if(!window.L){showFallback();return}
+   try{
+    showCanvas();
+    const m=L.map(el,{zoomControl:false,attributionControl:true,scrollWheelZoom:false,preferCanvas:true});
+    routeMapInstance=m;
+    const tiles=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap contributors',maxZoom:19});
+    tiles.on('load',()=>{if(fallback)fallback.style.display='none'});
+    tiles.on('tileerror',showFallback);tiles.addTo(m);
+    const line=L.polyline(points,{color:'#d2835d',weight:5,opacity:.98}).addTo(m);
+    L.circleMarker(points[0],{radius:6,color:'#fffbf4',weight:2.5,fillColor:'#79a483',fillOpacity:1}).addTo(m);
+    L.circleMarker(points.at(-1),{radius:6,color:'#fffbf4',weight:2.5,fillColor:'#d2835d',fillOpacity:1}).addTo(m);
+    const fit=()=>{if(el.isConnected){m.invalidateSize({pan:false});m.fitBounds(line.getBounds(),{padding:[26,26],maxZoom:16,animate:false})}};
+    requestAnimationFrame(()=>requestAnimationFrame(fit));setTimeout(fit,300);
+   }catch(e){console.warn('Map fallback unavailable',e);showFallback()}
+ }
+ if(!window.maplibregl){leafletFallback();return}
+ let m=null,loaded=false;
  try{
-  if(leafMap){leafMap.remove();leafMap=null}
-  el.style.display='block';el.style.height='100%';el.style.width='100%';
-  const fallback=document.querySelector('#map-fallback');
-  leafMap=L.map(el,{zoomControl:true,attributionControl:true,scrollWheelZoom:false,preferCanvas:true});
-  const tiles=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap contributors',maxZoom:19});
-  tiles.on('load',()=>{if(fallback)fallback.style.display='none'});
-  tiles.on('tileerror',()=>{if(fallback)fallback.style.display='block'});
-  tiles.addTo(leafMap);
-  const line=L.polyline(act.routePoints,{color:'#b96182',weight:5,opacity:.96}).addTo(leafMap);
-  L.circleMarker(act.routePoints[0],{radius:6,color:'#ffffff',weight:2,fillColor:'#72a48d',fillOpacity:1}).addTo(leafMap);
-  L.circleMarker(act.routePoints.at(-1),{radius:6,color:'#ffffff',weight:2,fillColor:'#ba5b7e',fillOpacity:1}).addTo(leafMap);
-  const fit=()=>{if(leafMap&&el.isConnected&&el.clientWidth>0){leafMap.invalidateSize({pan:false});leafMap.fitBounds(line.getBounds(),{padding:[26,26],maxZoom:17,animate:false})}};
-  requestAnimationFrame(()=>requestAnimationFrame(fit));setTimeout(fit,260);setTimeout(fit,900);
-  if(typeof ResizeObserver!=='undefined'){const ro=new ResizeObserver(()=>{if(el.isConnected)leafMap?.invalidateSize({pan:false});else ro.disconnect()});ro.observe(el)}
- }catch(e){console.warn('Map unavailable; coordinate-vector fallback retained',e);el.style.display='none';const fallback=document.querySelector('#map-fallback');if(fallback)fallback.style.display='block'}
+  showCanvas();
+  m=new maplibregl.Map({
+    container:el,
+    style:'https://tiles.openfreemap.org/styles/positron',
+    center:coords[0],zoom:12,pitch:0,bearing:0,
+    antialias:true,attributionControl:false,
+    dragRotate:false,scrollZoom:false,pitchWithRotate:false
+  });
+  routeMapInstance=m;
+  m.touchZoomRotate.disableRotation();
+  m.addControl(new maplibregl.AttributionControl({compact:true,customAttribution:
+   '<a href="https://openfreemap.org/" target="_blank" rel="noopener">OpenFreeMap</a> · <a href="https://www.openmaptiles.org/" target="_blank" rel="noopener">OpenMapTiles</a> · <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'}), 'bottom-right');
+  m.on('load',()=>{
+   if(!el.isConnected)return;loaded=true;
+   // Remove labels and POI icons: keep calm street, park, water and rail linework.
+   const style=m.getStyle();
+   for(const layer of style.layers||[]){
+     try{
+       if(layer.type==='symbol')m.setLayoutProperty(layer.id,'visibility','none');
+       else if(layer.type==='fill'&&/water|river|lake/i.test(layer.id))m.setPaintProperty(layer.id,'fill-color','#c5d9d3');
+       else if(layer.type==='fill'&&/park|grass|wood|green|landcover/i.test(layer.id))m.setPaintProperty(layer.id,'fill-color','#e2eadb');
+     }catch(_){}
+   }
+   m.addSource('motion-route',{type:'geojson',data:lineData});
+   m.addLayer({id:'motion-halo',type:'line',source:'motion-route',paint:{'line-color':'#fff8ed','line-width':9,'line-opacity':.96},layout:{'line-join':'round','line-cap':'round'}});
+   m.addLayer({id:'motion-trace',type:'line',source:'motion-route',paint:{'line-color':'#d77f5a','line-width':5,'line-opacity':1},layout:{'line-join':'round','line-cap':'round'}});
+   m.addSource('motion-endpoints',{type:'geojson',data:{type:'FeatureCollection',features:[
+     {type:'Feature',properties:{kind:'start'},geometry:{type:'Point',coordinates:coords[0]}},
+     {type:'Feature',properties:{kind:'finish'},geometry:{type:'Point',coordinates:coords.at(-1)}}
+   ]}});
+   m.addLayer({id:'motion-endpoint-dots',type:'circle',source:'motion-endpoints',paint:{
+     'circle-radius':6,'circle-color':['match',['get','kind'],'start','#7da487','#d77f5a'],
+     'circle-stroke-color':'#fffaf1','circle-stroke-width':2.5
+   }});
+   if(fallback)fallback.style.display='none';
+   m.resize();m.fitBounds([[bbox[0],bbox[1]],[bbox[2],bbox[3]]],{padding:28,maxZoom:16,duration:0});
+  });
+  m.on('webglcontextlost',()=>{console.warn('Map WebGL context lost');showFallback()});
+  m.on('error',e=>{if(!loaded)console.warn('Vector map loading issue:',e?.error||e)});
+  setTimeout(()=>{if(!loaded&&el.isConnected){try{m.remove()}catch(e){}routeMapInstance=null;showFallback();leafletFallback()}},12500);
+ }catch(e){console.warn('Vector map unavailable; using fallback',e);if(m)try{m.remove()}catch(_){}routeMapInstance=null;leafletFallback()}
 }
 
 function pointDistance(a,b){const rad=Math.PI/180,R=6371000,dlat=(b[0]-a[0])*rad,dlon=(b[1]-a[1])*rad;const x=Math.sin(dlat/2)**2+Math.cos(a[0]*rad)*Math.cos(b[0]*rad)*Math.sin(dlon/2)**2;return 2*R*Math.asin(Math.min(1,Math.sqrt(x)))}

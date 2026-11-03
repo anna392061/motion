@@ -1,4 +1,4 @@
-/* MOTION. anatomical viewer 1.4.3
+/* MOTION. anatomical viewer 1.4.3.1
  * Source mesh: Écorché, CC BY-SA 4.0 (see ATTRIBUTION_ANATOMY.md).
  * Bones retain original ivory vertex colours. Muscle vertex colours are remapped
  * into a warm cream/apricot palette, retaining their source lighting and tendon
@@ -13,19 +13,51 @@ const URLS=[
  'https://cdn.jsdelivr.net/gh/Charleeh/ecorche@main/model/ecorche.meshopt.glb',
  'https://raw.githubusercontent.com/Charleeh/ecorche/main/model/ecorche.meshopt.glb'
 ];
-const v={ready:false,busy:false,failed:false,renderer:null,camera:null,controls:null,scene:null,root:null,meshes:[],bones:[],muscles:[],grouped:new Map(),active:false,center:new THREE.Vector3(0,1,0),radius:2.6,host:null};
+const v={ready:false,busy:false,failed:false,renderer:null,camera:null,controls:null,scene:null,root:null,meshes:[],bones:[],muscles:[],grouped:new Map(),active:false,center:new THREE.Vector3(0,1,0),radius:2.6,host:null,frames:0,blankWarned:false,contextLost:false};
 function textStatus(s){const x=document.querySelector('#atlas-load-state');if(x)x.textContent=s;const y=document.querySelector('#atlas-fallback .atlas-fallback-note');if(y)y.textContent=s}
+function showFallback(msg){
+ const f=document.getElementById('atlas-fallback');
+ if(f){f.style.display='flex';f.style.zIndex='3';}
+ if(msg)textStatus(msg);
+}
+function hideFallback(){
+ const f=document.getElementById('atlas-fallback');
+ if(f){f.style.display='none';f.style.zIndex='1';}
+}
+// Check a few transparent pixels after the frame is drawn. A nonempty scene
+// ought to produce at least one visible pixel near the middle of the viewport.
+// Never leave an invisible model represented as a blank panel.
+function hasVisiblePixels(){
+ if(!v.renderer || v.contextLost)return false;
+ try{
+   const gl=v.renderer.getContext(),p=new Uint8Array(4);
+   const w=gl.drawingBufferWidth,h=gl.drawingBufferHeight;
+   if(w<4||h<4)return false;
+   for(let yi=1;yi<=7;yi++)for(let xi=1;xi<=7;xi++){
+     gl.readPixels(Math.floor(w*xi/8),Math.floor(h*yi/8),1,1,gl.RGBA,gl.UNSIGNED_BYTE,p);
+     if(p[3]>8)return true;
+   }
+ }catch(e){return true} // Do not diagnose a GPU readback restriction as a blank model.
+ return false;
+}
 function boot(){
  if(v.renderer)return;
  const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(34,1,.008,50);
  const renderer=new THREE.WebGLRenderer({alpha:true,antialias:true,powerPreference:'low-power'});
- renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.7));renderer.outputColorSpace=THREE.SRGBColorSpace;
+ renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.25));renderer.outputColorSpace=THREE.SRGBColorSpace;
  renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.45;
  scene.add(new THREE.HemisphereLight(0xffffff,0xc8ae99,2.5));
  const key=new THREE.DirectionalLight(0xfff7ed,2.2);key.position.set(-2,4,3);scene.add(key);
  const fill=new THREE.DirectionalLight(0xfbe7d7,1.2);fill.position.set(3,1,-2);scene.add(fill);
  const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.dampingFactor=.07;controls.enablePan=false;controls.minPolarAngle=.13;controls.maxPolarAngle=Math.PI-.12;
  v.renderer=renderer;v.camera=camera;v.scene=scene;v.controls=controls;
+ renderer.domElement.addEventListener('webglcontextlost',e=>{
+   e.preventDefault();v.contextLost=true;v.active=false;
+   showFallback('3D 渲染被设备暂停，请重新打开 Anatomy 或点击重试');
+ });
+ renderer.domElement.addEventListener('webglcontextrestored',()=>{
+   v.contextLost=false;v.active=true;v.frames=0;resize();updateScene(true);
+ });
  let down=null;
  renderer.domElement.addEventListener('pointerdown',e=>{down={x:e.clientX,y:e.clientY,t:performance.now()}});
  renderer.domElement.addEventListener('pointerup',e=>{
@@ -42,7 +74,14 @@ function boot(){
  let last=0;renderer.setAnimationLoop(ms=>{
    if(!v.active)return;
    if(ms-last<30)return;last=ms;
-   controls.update();renderer.render(scene,camera)
+   controls.update();renderer.render(scene,camera);
+   if(v.ready && ++v.frames===8){
+     if(hasVisiblePixels()){hideFallback();v.blankWarned=false;}
+     else {
+       v.blankWarned=true;
+       showFallback('3D 已读取，但画面未正常绘制。请点击复位视角；如果仍空白，请更新网页后重试。');
+     }
+   }
  });
 }
 function objName(o){return String(o.userData?.name||o.parent?.userData?.name||o.name||'').replace(/_/g,' ')}
@@ -50,31 +89,33 @@ function regionOfObj(o){return atlasRegionFor(atlasCleanName(objName(o)))}
 // Recolour original red muscle vertex colours, without replacing the mesh or its actual geometry.
 // Read the original baked tone and pale tendon transitions; the mesh shape and surface
 // details remain native to Écorché. Uses a per-geometry cache to avoid duplicating work.
-const tintedGeometries=new WeakMap();
+// iOS memory fix: Do NOT clone 362 geometries or expand Uint8 colours into
+// Float32 attributes. Tint the existing vertex colours in their original format.
+// This preserves encoded tendon gradients, geometry, materials, and GPU memory.
+const tintedColours = new WeakSet();
 function tintMuscle(o){
- const original=o.geometry;
- if(!original)return;
- const cached=tintedGeometries.get(original);
- if(cached){o.geometry=cached;return}
- const colors=original.getAttribute('color');
- if(!colors)return; // Some third-party models provide only material colour.
- const geometry=original.clone();
- const buf=new Float32Array(colors.count*colors.itemSize);
- const cap=x=>Math.min(1,Math.max(0,x));
- const read=(v)=>v>1? v/255 : v;
- for(let i=0;i<colors.count;i++){
-   const red=cap(read(colors.getX(i))), green=cap(read(colors.getY(i))), blue=cap(read(colors.getZ(i)));
-   // Red-rich tissue -> peach/apricot; pale tendons -> soft ivory/cream.
-   const tissue=cap((red-Math.max(green,blue)) / Math.max(.18,red*.82));
-   const w=Math.pow(tissue,.72);
-   const sourceLight=cap(red*.55+green*.32+blue*.13);
-   const shade=.77+.25*sourceLight; // retain gentle native highlights and shadows
-   const tendon=[.97,.92,.87], muscle=[.96,.74,.56];
-   for(let k=0;k<3;k++)buf[i*colors.itemSize+k]=cap((tendon[k]*(1-w)+muscle[k]*w)*shade);
-   if(colors.itemSize===4)buf[i*colors.itemSize+3]=read(colors.getW(i));
- }
- geometry.setAttribute('color',new THREE.Float32BufferAttribute(buf,colors.itemSize));
- tintedGeometries.set(original,geometry);o.geometry=geometry;
+  const attr=o.geometry?.getAttribute('color');
+  if(!attr || tintedColours.has(attr))return;
+  tintedColours.add(attr);
+  const data=attr.array, stride=attr.itemSize;
+  const integer=data instanceof Uint8Array || data instanceof Uint8ClampedArray ||
+    data instanceof Uint16Array;
+  const max = data instanceof Uint16Array ? 65535 : integer ? 255 : 1;
+  const cap=x=>Math.max(0,Math.min(1,x));
+  for(let i=0;i<attr.count;i++){
+    const j=i*stride;
+    const red=cap(data[j]/max),green=cap(data[j+1]/max),blue=cap(data[j+2]/max);
+    const tissue=cap((red-Math.max(green,blue))/Math.max(.18,red*.82));
+    const weight=Math.pow(tissue,.72);
+    const light=cap(red*.55+green*.32+blue*.13);
+    const shade=.77+.25*light;
+    const tendon=[.97,.92,.87],muscle=[.96,.74,.56];
+    for(let k=0;k<3;k++){
+      const value=cap((tendon[k]*(1-weight)+muscle[k]*weight)*shade)*max;
+      data[j+k]=integer?Math.round(value):value;
+    }
+  }
+  attr.needsUpdate=true;
 }
 function initGeometry(gltf){
  v.root=gltf.scene;v.meshes=[];v.bones=[];v.muscles=[];v.grouped.clear();
@@ -93,7 +134,7 @@ function initGeometry(gltf){
    v.meshes.push(o);
  });
  if(v.muscles.length<180)throw Error('模型未能读取完整肌肉图层');
- v.scene.add(v.root);v.root.updateMatrixWorld(true);v.ready=true;v.failed=false;v.busy=false;
+ v.scene.add(v.root);v.root.updateMatrixWorld(true);v.ready=true;v.failed=false;v.busy=false;v.frames=0;
  const items=Array.from(v.grouped.values()).sort((a,b)=>a.name.localeCompare(b.name));
  atlasLoadList(items);
  if(atlasState.region&&(!atlasState.name||!v.grouped.has(atlasState.name))){atlasState.name=items.find(x=>x.region===atlasState.region)?.name||''}
@@ -151,7 +192,7 @@ function updateScene(autoFocus=false){
    const c=new THREE.Box3().setFromObject(b).getCenter(new THREE.Vector3());b.visible=c.distanceTo(center)<Math.max(.26,Math.min(.62,size*.58))
  }
  if(autoFocus)focus(Boolean(reg&&name));
- const standin=document.querySelector('#atlas-fallback');if(standin)standin.style.display='none';
+ v.frames=0;showFallback('正在绘制 3D 肌肉模型…');
  textStatus(reg?`${atlasDisplayName(name)} · 拖动旋转 / 双指缩放`:`${v.grouped.size} 个肌肉名称 · 点击选择身体部位`);
 }
 function resize(){if(!v.renderer||!v.host)return;const w=Math.max(1,v.host.clientWidth),h=Math.max(1,v.host.clientHeight);v.renderer.setSize(w,h,false);v.camera.aspect=w/h;v.camera.updateProjectionMatrix()}
@@ -165,7 +206,7 @@ function attach(){
  else if(v.failed)textStatus('模型暂不可用，点击下方提示重试');
 }
 function pause(){v.active=false}
-function reset(){if(v.ready)focus(Boolean(atlasState.region&&atlasState.name))}
+function reset(){if(v.ready){focus(Boolean(atlasState.region&&atlasState.name));v.frames=0;showFallback('正在重新绘制 3D…')}}
 window.motionAtlas3D={attach,pause,reset,retry:()=>{v.failed=false;load()},status:()=>({ready:v.ready,meshCount:v.muscles.length,uniqueMuscles:v.grouped.size})};
 if(state.nav==='strength'&&state.strengthTab==='anatomy')requestAnimationFrame(attach);
 window.addEventListener('resize',resize,{passive:true});

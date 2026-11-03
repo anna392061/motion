@@ -54,16 +54,19 @@ settingsOverlay=function(){const old=settingsBeforeV14().replace('V1.2','V1.4');
 const activityBeforeV14=activityOverlay;
 activityOverlay=function(){let html=activityBeforeV14();const a=state.manual.find(x=>x.id===state.activityID);if(!a)return html;let extras='';
 if(a.type==='run')extras+=shoePickerForActivity(a);
-if(a.paceSeries?.length>1)extras+=graphSVG(a.paceSeries,'PACE · 配速','sec/km','#c57741');
+if(a.type==='run'&&a.paceSeries?.length>1)extras+=motionPaceGraph(a.paceSeries);
 if(a.type==='cycle'&&a.speedSeries?.length>1)extras+=graphSVG(a.speedSeries.map(p=>[p[0],p[1]*3.6]),'SPEED · 速度','km/h','#c57741');
 if(a.cadenceSeries?.length>1&&(a.type==='run'||a.type==='cycle')){
-  // Intervals.icu and raw Garmin FIT cadence represent one-leg strides/revolutions
-  // per minute. Running step cadence counts BOTH feet (spm); cycling stays rpm.
+  // FIT / Intervals cadence can be strides/min or steps/min; normalize for display.
   // Conversion is display-only; never modify stored cadenceSeries or backups.
   const isRunning=a.type==='run';
-  const cadencePoints=isRunning
-    ? a.cadenceSeries.map(p=>[p[0],p[1]*2])
-    : a.cadenceSeries;
+  // Sources may report either strides/min (one foot) or steps/min (both feet).
+  // Infer the representation from the median of positive samples once per activity,
+  // not per point, avoiding accidental 340+ spm for already-normalized records.
+  const cadenceSamples=a.cadenceSeries.map(p=>Number(p[1])).filter(v=>Number.isFinite(v)&&v>15&&v<300).sort((x,y)=>x-y);
+  const median=cadenceSamples.length?cadenceSamples[Math.floor(cadenceSamples.length/2)]:0;
+  const runScale=isRunning&&median>0&&median<125?2:1;
+  const cadencePoints=isRunning?a.cadenceSeries.map(p=>[p[0],p[1]*runScale]):a.cadenceSeries;
   extras+=graphSVG(cadencePoints,
     isRunning?'RUNNING CADENCE · 步频':'CYCLING CADENCE · 踏频',
     isRunning?'步/分钟':'rpm','#a27f5f');

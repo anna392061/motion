@@ -272,7 +272,7 @@ importSelectedActivities=async function(){
 // Restore reconciles link metadata on equal IDs rather than silently dropping
 // the relationships when restoring into an already populated installation.
 exportData=function(){
-  downloadJSON({format:'motion-backup-v1',appVersion:'1.4.1',exportedAt:new Date().toISOString(),activities:state.manual,gear:gearList,plan:state.plan,favorites:state.favorites,wishlist:state.wishlist,notes:state.notes},
+  downloadJSON({format:'motion-backup-v1',appVersion:'1.4.1',exportedAt:new Date().toISOString(),activities:state.manual,gear:gearList,plan:state.plan,favorites:state.favorites,wishlist:state.wishlist,notes:state.notes,strengthTemplates:(window.MOTIONStrength?.getTemplates?.()||[])},
     'MOTION-backup-'+dateKey(new Date())+'.json');
   toast('完整备份已下载（包含力量训练关联）');
 };
@@ -312,6 +312,8 @@ importBackup=async function(){
         if(Array.isArray(data.favorites))state.favorites=data.favorites;
         if(Array.isArray(data.wishlist))state.wishlist=data.wishlist;
         if(data.notes&&typeof data.notes==='object')state.notes={...state.notes,...data.notes};
+        if(Array.isArray(data.strengthTemplates)&&data.strengthTemplates.length)window.MOTIONStrength?.restoreTemplates?.(data.strengthTemplates);
+        else if(Array.isArray(data.plan))window.MOTIONStrength?.restoreLegacyPlan?.(data.plan);
         persist();
       }
       render();toast('备份恢复完成，力量训练关联已保留');

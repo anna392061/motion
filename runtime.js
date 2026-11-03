@@ -4,6 +4,18 @@ const config = {
   url: localStorage.getItem('motion_worker_url') || '',
   token: localStorage.getItem('motion_saved_worker_token') || sessionStorage.getItem('motion_session_token') || ''
 };
+// V1.4.5: keep an existing MOTION sync token when upgrading the same app origin.
+// A token cannot be recovered if the browser has already erased it; in that case enter it once.
+try {
+  const priorSessionToken = sessionStorage.getItem('motion_session_token');
+  const storedToken = localStorage.getItem('motion_saved_worker_token');
+  if (priorSessionToken && !storedToken && localStorage.getItem('motion_remember_worker_token') !== '0') {
+    localStorage.setItem('motion_saved_worker_token', priorSessionToken);
+  }
+  if (!config.token && localStorage.getItem('motion_saved_worker_token')) {
+    config.token = localStorage.getItem('motion_saved_worker_token');
+  }
+} catch (e) { console.warn('Unable to migrate MOTION sync token', e); }
 const muscleInsights = {
   gluteMed: {why:'单腿支撑时帮助控制骨盆与股骨，是跑步、上下台阶和单腿训练中的重要稳定肌。',movement:'它可以将大腿向外侧抬起；在脚落地的支撑阶段，还参与控制骨盆侧倾和股骨运动。',attention:'单腿 RDL 时关注骨盆是否稳定；侧向髋外展时避免身体侧弯代偿。局部酸胀不是训练有效的唯一标准。'},
   gluteMax: {why:'髋伸的主要动力肌，参与站起、登阶、跑步加速和跳跃。',movement:'髋由屈曲转向伸直时，它会产生力量；在负重动作中也参与控制股骨位置。',attention:'臀推顶端将髋伸到位而不是用腰过度后仰；RDL 先向后折髋，再驱动髋向前。'},
@@ -43,10 +55,15 @@ async function deleteSelectedActivity(){const a=state.manual.find(a=>a.id===stat
 function saveConfig(){
  const urlEl=document.querySelector('#worker-url'),tokEl=document.querySelector('#worker-token');
  if(urlEl)config.url=urlEl.value.trim().replace(/\/+$/,'');
- if(tokEl)config.token=tokEl.value.trim();
- const remember=document.querySelector('#remember-worker-token')?.checked===true;
+ // An empty password field must not accidentally erase an existing token.
+ if(tokEl && tokEl.value.trim())config.token=tokEl.value.trim();
+ const rememberEl=document.querySelector('#remember-worker-token');
+ let remember=true;
+ try { remember=rememberEl?rememberEl.checked:localStorage.getItem('motion_remember_worker_token')!=='0'; }
+ catch(e){ remember=rememberEl?rememberEl.checked:true; }
  try{
    localStorage.setItem('motion_worker_url',config.url);
+   localStorage.setItem('motion_remember_worker_token',remember?'1':'0');
    if(remember && config.token){
      localStorage.setItem('motion_saved_worker_token',config.token);
      sessionStorage.removeItem('motion_session_token');
@@ -55,18 +72,18 @@ function saveConfig(){
      if(config.token)sessionStorage.setItem('motion_session_token',config.token);
      else sessionStorage.removeItem('motion_session_token');
    }
-   toast(remember&&config.token?'已记住访问口令，下次打开无需重复填写':'已保存连接配置（口令仅当前会话有效）');
+   toast(remember&&config.token?'访问口令已保存到本设备':'已保存配置；访问口令仅当前会话有效');
  }catch(e){
-   try{sessionStorage.setItem('motion_session_token',config.token)}catch{}
-   toast('本地保存不可用：本次会话仍可同步，请检查浏览器存储权限');
+   try{if(config.token)sessionStorage.setItem('motion_session_token',config.token)}catch{}
+   toast('设备持久化存储不可用，本次会话仍可以同步');
  }
 }
 function forgetWorkerToken(){
- try{localStorage.removeItem('motion_saved_worker_token');sessionStorage.removeItem('motion_session_token')}catch{}
+ try{localStorage.removeItem('motion_saved_worker_token');sessionStorage.removeItem('motion_session_token');localStorage.setItem('motion_remember_worker_token','0')}catch{}
  config.token='';
  const input=document.querySelector('#worker-token');if(input)input.value='';
  const check=document.querySelector('#remember-worker-token');if(check)check.checked=false;
- toast('本设备保存的访问口令已清除');
+ toast('已清除当前设备的同步访问口令');
 }
 function openSync(){document.querySelector('#sync-sheet')?.remove();document.querySelector('.overlay')?.remove();state.overlay=null;const e=document.createElement('div');e.className='overlay sync-sheet';e.id='sync-sheet';e.innerHTML=`<button class="backlink" onclick="closeSync()">← 返回</button><div class="micro">MANUAL SYNC</div><h1 class="page-title">Sync your movement<span style="color:var(--green)">.</span></h1><p class="sub">只在点击时读取你的运动。Apple Watch 数据需先经 Companion 上传至 Intervals.icu。</p><div class="card p20" style="margin-top:21px"><div class="sync-provider"><span class="sync-dot">◉</span><div><strong>Apple Watch</strong><small>Intervals.icu · 跑步、网球与力量</small></div><span class="pill">API</span></div><div class="sync-provider"><span class="sync-dot">↗</span><div><strong>Garmin Connect</strong><small>个人 API · 骑行</small></div><span class="pill">API</span></div><div id="sync-status" class="helper" aria-live="polite" style="margin:17px 0">${config.url?'已配置 Worker 地址。':'先在「设置」中填写 Worker 地址和访问口令。'}</div><button class="primary" style="width:100%" id="sync-run" onclick="syncNow()">↻ 开始同步</button></div><div class="card p18" style="margin-top:16px"><div class="spread"><div><b>无需连接，也可导入</b><p class="helper">GPX、TCX、FIT 运动文件</p></div><button class="soft-btn" onclick="document.querySelector('#import-file').click()">导入文件</button></div></div><div class="notice section">MOTION. 不会定时查询账户。API 密钥存储在你部署的 Cloudflare Worker Secrets 中，运动数据留在当前浏览器。</div>`;document.querySelector('.app').append(e);e.scrollTop=0}
 function closeSync(){document.querySelector('#sync-sheet')?.remove();render()}

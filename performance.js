@@ -191,12 +191,8 @@ function perfOverview(){
  return '<section class="section perf-entry"><div class="section-row"><h2 class="section-title">Performance · 表现记录</h2><span class="micro">RUNNING</span></div><div class="card p18"><p class="helper">同一路线与路段对比 · 1 / 3 / 5 / 6 / 8 km 历史成绩</p>'+alertsHtml()+'<button class="soft-btn perf-link" onclick="MOTIONPerformance.open()">查看历史表现 →</button></div></section>';
 }
 function perfDetail(a){
- const m=matchesFor(a,1),n=DISTANCES.map(d=>({d,result:effort(a,d)})).filter(x=>x.result);
- const last=m[0];if(!last&&!n.length)return '<section class="section perf-in-detail"><div class="card p18"><div class="micro">RUNNING PERFORMANCE</div><p class="helper">可查看历史对比；完整计时数据不足时不会生成未经验证的纪录。</p><button class="soft-btn" onclick="MOTIONPerformance.open(\''+safe(a.id)+'\')">查看 Performance →</button></div></section>';
- return '<section class="section perf-in-detail"><div class="card p18"><div class="micro">RUNNING PERFORMANCE</div>'+
- (last?'<p class="perf-small"><strong>⌁ '+(last.full?"同一路线":"共同路段")+'</strong> · '+(last.meters/1000).toFixed(1)+' km · '+safe(last.other.date)+'</p>':'')+
- (n.length?'<p class="perf-small"><strong>距离表现</strong> · '+n.map(x=>x.d+' km '+timeText(x.result.seconds)+(x.result.quality==="splits"?"*":"")).join(' · ')+'</p>':'')+
- '<button class="soft-btn perf-link" onclick="MOTIONPerformance.open(\''+safe(a.id)+'\')">查看历史对比 →</button></div></section>';
+  // Keep the activity detail clean; calculate and show comparisons only on demand.
+  return '<section class="section perf-in-detail"><button type="button" class="soft-btn perf-link" onclick="MOTIONPerformance.open(\''+safe(a.id)+'\')">查看历史对比 →</button></section>';
 }
 function chart(values){
  if(values.length<2)return '';

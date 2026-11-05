@@ -1,0 +1,23 @@
+/* MOTION. Performance V1 — opt-in running analysis, existing map unmodified */
+.perf-entry .card{border-color:#ead8cb}
+.perf-link{width:100%;margin-top:12px;text-align:center}
+.perf-notice-list{margin-top:12px;display:grid;gap:8px}
+.perf-notice{background:#fff7ee;border:1px solid #ead4c5;border-radius:14px;text-align:left;padding:12px 14px;color:#80563e;display:block;width:100%;line-height:1.5}
+.perf-notice strong,.perf-notice small{display:block}.perf-notice small{font-size:12px;color:#9a7a66;margin-top:3px}
+.perf-in-detail{margin-top:18px;margin-bottom:22px}.perf-small{color:#6a4b3b;font-size:13px;margin:10px 0}
+.perf-screen{padding-bottom:70px}.perf-tabs{display:grid;grid-template-columns:1fr 1fr;gap:5px;background:#f3e4d5;border-radius:15px;padding:5px;margin:22px 0 18px}
+.perf-tabs button{border:0;border-radius:11px;color:#ab8b78;background:transparent;font-size:14px;padding:11px 4px;font-weight:650}
+.perf-tabs button.active{color:#aa6b48;background:#fffaf4;box-shadow:0 2px 7px #7d553417}
+.perf-card{background:#fffaf5;border:1px solid #ecd7c8;border-radius:20px;padding:17px;margin:12px 0;color:#6f4d3a}
+.perf-card h3{font-family:Georgia,serif;font-size:23px;font-weight:600;margin:9px 0}
+.perf-spread{display:flex;align-items:center;justify-content:space-between;gap:10px}.perf-spread small{font-size:12px;color:#a18979}
+.perf-value{font-size:25px;font-weight:650;margin:14px 0 4px}.perf-value span{font-size:12px;font-weight:400;color:#ac9181}
+.perf-sub{font-size:13px;line-height:1.65;color:#927663;margin:6px 0}.perf-note{font-size:12px;color:#9a8373;line-height:1.7;margin:18px 3px}
+.perf-dist-buttons{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px;margin:12px 0 18px}
+.perf-dist-buttons button{font-size:12px;padding:12px 0;border:1px solid #ead6c7;color:#ad866c;background:#fffbf7;border-radius:12px;min-width:0}
+.perf-dist-buttons button.active{background:#c18c67;color:white;border-color:#c18c67}
+.perf-hero{font-family:Georgia,serif;font-size:45px;line-height:1.2;letter-spacing:-1px;margin-top:9px;color:#6c4834}
+.perf-chart{width:100%;display:block;margin:14px 0 4px}.perf-history{margin-top:12px}
+.perf-history button{width:100%;border:0;background:transparent;border-top:1px solid #f0e1d6;display:flex;align-items:center;justify-content:space-between;gap:10px;text-align:left;padding:12px 1px;color:#684938}
+.perf-history button span{font-size:13px}.perf-history button strong{font-size:16px}.perf-history button small{font-size:11px;color:#b19a88}
+@media(max-width:390px){.perf-dist-buttons{gap:4px}.perf-card{padding:14px}.perf-history button{gap:6px;flex-wrap:wrap}}

@@ -175,6 +175,6 @@ settingsOverlay=function(){
  return base.replace(label,'同步访问口令')
    .replace(intro,tokenSettings+intro)
    .replace('访问口令关闭浏览器标签页后需重新输入。','保存后更新网页无需重复输入；如果已清除网站数据，需重新填写一次。')
-   +`<section class="card p18 section"><div class="micro">APP VERSION</div><h2 class="section-title">MOTION. V1.4.5</h2><p class="helper">Strength UI · Exercise Roles · Remember Sync Token</p></section>`;
+   +`<section class="card p18 section"><div class="micro">APP VERSION</div><h2 class="section-title">MOTION. V1.4.7</h2><p class="helper">Strength quick input · Performance comparison · Remember Sync Token</p></section>`;
 };
 })();

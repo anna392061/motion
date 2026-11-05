@@ -1,4 +1,4 @@
-/* MOTION. Strength Core 1.4.5 — real local data, editable templates, activity-linked history.
+/* MOTION. Strength Core 1.4.7 — real local data, editable templates, activity-linked history.
    This replaces ONLY Strength's screen. It does not change sync, calendars, activities or gear. */
 (function(){
 'use strict';
@@ -9,7 +9,7 @@ const clone=x=>JSON.parse(JSON.stringify(x));
 const num=(n,min=0,max=999)=>Math.min(max,Math.max(min,Number(n)||0));
 const gen=()=>('t'+Date.now().toString(36)+Math.random().toString(36).slice(2,7));
 const parseJSON=(key,def)=>{try{return JSON.parse(localStorage.getItem(key))??def}catch{return def}};
-const createSet=(w=0,r=10)=>({weight:String(w),reps:String(r),rir:'',done:false});
+const createSet=(w=0,r=10)=>({weight:String(w),reps:String(r),done:false});
 const safeId=id=>String(id||'').replace(/[^a-z0-9_-]/gi,'');
 const itemsFromPlan=()=>Array.isArray(state.plan)?state.plan.filter(p=>getEx(p.id)).map(p=>({id:p.id,sets:Array.from({length:Math.max(1,Math.min(15,Number(p.sets)||3))},()=>createSet(p.weight??0,p.reps??10))})):[];
 const extra=[
@@ -25,7 +25,7 @@ const extra=[
 {id:'pallof',name:'Pallof Press',en:'Pallof Press',pattern:'Core · 抗旋转',primary:['abs'],secondary:[],stabilizer:[],desc:'站姿抗旋转练习。'}
 ];
 extra.forEach(e=>{if(!exerciseList.some(a=>a.id===e.id))exerciseList.push({...e,setup:[],execution:[],mistakes:[],cue:''})});
-function sanitizeTemplates(raw){return raw.filter(t=>t&&Array.isArray(t.items)).slice(0,40).map(t=>({id:safeId(t.id)||gen(),name:String(t.name||'我的训练').slice(0,80),desc:String(t.desc||'').slice(0,160),items:t.items.filter(i=>i&&getEx(i.id)).slice(0,35).map(i=>({id:i.id,sets:(Array.isArray(i.sets)&&i.sets.length?i.sets:[createSet()]).slice(0,25).map(s=>({weight:String(num(s.weight,0,999)),reps:String(num(s.reps,0,200)),rir:s.rir===''?'':String(num(s.rir,0,10)),done:false}))}))}));}
+function sanitizeTemplates(raw){return raw.filter(t=>t&&Array.isArray(t.items)).slice(0,40).map(t=>({id:safeId(t.id)||gen(),name:String(t.name||'我的训练').slice(0,80),desc:String(t.desc||'').slice(0,160),items:t.items.filter(i=>i&&getEx(i.id)).slice(0,35).map(i=>({id:i.id,sets:(Array.isArray(i.sets)&&i.sets.length?i.sets:[createSet()]).slice(0,25).map(s=>({weight:String(num(s.weight,0,999)),reps:String(num(s.reps,0,200)),done:false}))}))}));}
 let templates=sanitizeTemplates(parseJSON(STORAGE,[]));
 if(!templates.length){templates=[{id:'legacy-lower-a',name:'Lower Body A',desc:'从原有 My Plan 安全迁移',items:itemsFromPlan()}];saveTemplates();}
 let active=parseJSON(ACTIVE,null);
@@ -69,7 +69,7 @@ function edit(){if(!draft)return home();return `<button class="sc-back" onclick=
  </section>`).join('')||'<p class="sc-empty">模板尚无动作。点击上方添加动作。</p>'}
  <div class="sc-actions">${btn('取消','MOTIONStrength.cancelEdit()','outline')}${btn('保存模板','MOTIONStrength.saveEdit()','solid')}</div>
  ${!editNew?`<div class="sc-delete">${btn('删除这个模板','MOTIONStrength.deleteTemplate()','quiet')}</div>`:''}`}
-function setRow(set,i,j,type){return `<div class="sc-setrow"><span>${j+1}</span><label>KG<input aria-label="第 ${j+1} 组重量" inputmode="decimal" type="number" min="0" max="999" step="0.5" value="${X(set.weight)}" onchange="MOTIONStrength.setField('${type}',${i},${j},'weight',this.value)"></label><label>REPS<input aria-label="第 ${j+1} 组次数" inputmode="numeric" type="number" min="0" max="200" value="${X(set.reps)}" onchange="MOTIONStrength.setField('${type}',${i},${j},'reps',this.value)"></label><label>RIR<input aria-label="第 ${j+1} 组 RIR" inputmode="numeric" type="number" min="0" max="10" placeholder="–" value="${X(set.rir??'')}" onchange="MOTIONStrength.setField('${type}',${i},${j},'rir',this.value)"></label>${type==='workout'?`<button class="sc-check ${set.done?'done':''}" aria-label="完成第 ${j+1} 组" onclick="MOTIONStrength.mark(${i},${j})">${set.done?'✓':'○'}</button>`:`<button class="sc-check" aria-label="删除第 ${j+1} 组" onclick="MOTIONStrength.delSet(${i},${j})">×</button>`}</div>`}
+function setRow(set,i,j,type){return `<div class="sc-setrow"><span>${j+1}</span><label>KG<input aria-label="第 ${j+1} 组重量" inputmode="decimal" type="text" autocomplete="off" spellcheck="false" value="${X(set.weight)}" onfocus="MOTIONStrength.selectNumber(this)" onclick="MOTIONStrength.selectNumber(this)" onchange="this.value=MOTIONStrength.setField('${type}',${i},${j},'weight',this.value)"></label><label>REPS<input aria-label="第 ${j+1} 组次数" inputmode="numeric" type="text" autocomplete="off" spellcheck="false" value="${X(set.reps)}" onfocus="MOTIONStrength.selectNumber(this)" onclick="MOTIONStrength.selectNumber(this)" onchange="this.value=MOTIONStrength.setField('${type}',${i},${j},'reps',this.value)"></label>${type==='workout'?`<button class="sc-check ${set.done?'done':''}" aria-label="完成第 ${j+1} 组" onclick="MOTIONStrength.mark(${i},${j})">${set.done?'✓':'○'}</button>`:`<button class="sc-check" aria-label="删除第 ${j+1} 组" onclick="MOTIONStrength.delSet(${i},${j})">×</button>`}</div>`}
 function workout(){if(!active){mode='home';return home()}return `<button class="sc-back" onclick="MOTIONStrength.go('home')">← 返回模板（训练会保留）</button>${top('● WORKOUT IN PROGRESS',active.name,'逐组记录真实完成情况，未完成组不会进入历史。')}
  <div class="sc-timer">开始时间 ${X(new Date(active.startAt).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}))} · 计时中</div>
  ${active.items.map((it,i)=>`<section class="sc-exercise"><div class="sc-exhead"><div><b>${i+1}. ${X(asName(it.id))}</b><small>${X(lastStr(it.id))}</small></div>${btn('查看历史 →',`MOTIONStrength.openDetail('${it.id}','workout')`,'quiet')}</div>${it.sets.map((s,j)=>setRow(s,i,j,'workout')).join('')}<div class="sc-mini sc-line">${btn('＋ 一组',`MOTIONStrength.addSet(${i})`,'quiet')}${btn('替换',`MOTIONStrength.pick('workout',${i})`,'quiet')}${btn('移除',`MOTIONStrength.removeItem(${i})`,'quiet')}${btn('↑',`MOTIONStrength.move(${i},-1)`,'quiet')}${btn('↓',`MOTIONStrength.move(${i},1)`,'quiet')}</div></section>`).join('')}
@@ -130,7 +130,8 @@ function saveEdit(){if(!draft)return;if(!draft.name.trim()){toast('请填写模�
 function cancelEdit(){if(draft&&!confirm('放弃未保存的模板修改？'))return;draft=null;editId=null;editNew=false;mode='home';refresh()}
 function deleteTemplate(){if(!editId||!confirm('删除这个训练模板？历史运动记录不会删除。'))return;templates=templates.filter(t=>t.id!==editId);saveTemplates();syncLegacyPlan();draft=null;editId=null;mode='home';refresh()}
 function current(type){return type==='edit'?draft:active}
-function setField(type,i,j,field,value){let s=current(type)?.items?.[i]?.sets?.[j];if(!s)return;s[field]=field==='rir'&&value===''?'':String(num(value,0,field==='weight'?999:field==='reps'?200:10));if(type==='workout')keepActive()}
+function selectNumber(el){if(el&&typeof el.select==='function')el.select()}
+function setField(type,i,j,field,value){const s=current(type)?.items?.[i]?.sets?.[j];if(!s||!['weight','reps'].includes(field))return '';const n=num(value,0,field==='weight'?999:200);s[field]=String(field==='reps'?Math.round(n):n);if(type==='workout')keepActive();return s[field]}
 function move(i,delta){const c=mode==='edit'?draft:active;if(!c)return;const j=i+delta;if(j<0||j>=c.items.length)return;[c.items[i],c.items[j]]=[c.items[j],c.items[i]];if(active===c)keepActive();refresh()}
 function removeItem(i){const c=mode==='edit'?draft:active;if(!c)return;c.items.splice(i,1);if(active===c)keepActive();refresh()}
 function addSet(i){const c=mode==='edit'?draft:active,it=c?.items?.[i];if(!it||it.sets.length>=25)return;let last=it.sets.at(-1)||createSet();it.sets.push({...last,done:false});if(c===active)keepActive();refresh()}
@@ -139,11 +140,11 @@ function mark(i,j){let s=active?.items?.[i]?.sets?.[j];if(!s)return;s.done=!s.do
 function start(id){if(active&&!confirm('已有未完成训练，是否放弃并开始新训练？'))return;let t=templates.find(x=>x.id===id);if(!t||!t.items.length){toast('先在模板中添加动作');return}active={id:gen(),name:t.name,templateId:t.id,startAt:Date.now(),items:clone(t.items).map(x=>({...x,sets:x.sets.map(s=>({...s,done:false}))}))};keepActive();mode='workout';refresh()}
 function resume(){if(!active)return;mode='workout';refresh()}
 function discard(){if(!confirm('丢弃这次未完成的训练？此前的历史记录不会受到影响。'))return;active=null;keepActive();mode='home';refresh()}
-async function finish(){if(!active||busy)return;const done=active.items.map(it=>({id:it.id,sets:it.sets.filter(s=>s.done).map(s=>({weight:num(s.weight),reps:num(s.reps),...(s.rir!==''?{rir:num(s.rir,0,10)}:{})}))})).filter(it=>it.sets.length);if(!done.length){toast('请先完成至少一组');return}busy=true;const from=active;
+async function finish(){if(!active||busy)return;const done=active.items.map(it=>({id:it.id,sets:it.sets.filter(s=>s.done).map(s=>({weight:num(s.weight),reps:num(s.reps)}))})).filter(it=>it.sets.length);if(!done.length){toast('请先完成至少一组');return}busy=true;const from=active;
  const secs=Math.max(1,Math.round((Date.now()-from.startAt)/60000));const a={id:'m'+Date.now()+'sc',date:dateKey(new Date(from.startAt)),start:new Date(from.startAt).toISOString(),type:'strength',title:from.name+' · 力量训练',minutes:secs,sets:done.reduce((n,it)=>n+it.sets.length,0),exNames:done.map(it=>asName(it.id)),log:done,source:'手动记录'};
  try{state.manual.push(a);await storeActivity(a);active=null;keepActive();mode='history';refresh();toast('已保存运动，可在历史中关联 Apple Watch')}catch(e){state.manual=state.manual.filter(x=>x.id!==a.id);toast('保存失败，请保留页面重试');console.error(e)}finally{busy=false}}
 function pick(context,index=null){pickContext={context,index};mode='library';search='';filter='全部';refresh()}
-function choose(id){const e=getEx(id);if(!e||!pickContext)return;const {context,index}=pickContext;const target=context==='edit'?draft:active;if(!target)return;const prior=last(id)?.sets||[];const item={id,sets:prior.length?prior.map(s=>({...createSet(s.weight,s.reps),rir:s.rir??''})):Array.from({length:3},()=>createSet())};if(index===null||index===undefined)target.items.push(item);else target.items.splice(index,1,item);if(context==='workout')keepActive();pickContext=null;mode=context==='edit'?'edit':'workout';refresh();toast('动作已添加')}
+function choose(id){const e=getEx(id);if(!e||!pickContext)return;const {context,index}=pickContext;const target=context==='edit'?draft:active;if(!target)return;const prior=last(id)?.sets||[];const item={id,sets:prior.length?prior.map(s=>createSet(s.weight,s.reps)):Array.from({length:3},()=>createSet())};if(index===null||index===undefined)target.items.push(item);else target.items.splice(index,1,item);if(context==='workout')keepActive();pickContext=null;mode=context==='edit'?'edit':'workout';refresh();toast('动作已添加')}
 function backFromLibrary(){const ctx=pickContext?.context;pickContext=null;mode=ctx==='edit'?'edit':ctx==='workout'?'workout':'home';refresh()}
 function openDetail(id,origin='library'){detailId=id;returnMode=origin;mode='detail';refresh()}
 function backFromDetail(){mode=returnMode;refresh()}
@@ -159,7 +160,7 @@ function restoreLegacyPlan(plan){
  else templates.unshift({id:'legacy-lower-a',name:'Lower Body A',desc:'从旧版训练计划恢复',items});
  saveTemplates();refresh();
 }
-window.MOTIONStrength={screen,go,openTemplateEditor,editTemplate:openTemplateEditor,restoreLegacyPlan,newTemplate,saveEdit,cancelEdit,deleteTemplate,editName:v=>{if(draft)draft.name=v},editDescription:v=>{if(draft)draft.desc=v},move,removeItem,addSet,delSet,mark,setField,start,resume,discard,finish,pick,choose,backFromLibrary,openDetail,backFromDetail,quickAdd,search:searchFor,filter:setFilter,note:(id,value)=>{state.notes[id]=value;persist()},getTemplates:()=>clone(templates),restoreTemplates};
+window.MOTIONStrength={screen,go,openTemplateEditor,editTemplate:openTemplateEditor,restoreLegacyPlan,newTemplate,saveEdit,cancelEdit,deleteTemplate,editName:v=>{if(draft)draft.name=v},editDescription:v=>{if(draft)draft.desc=v},move,removeItem,addSet,delSet,mark,setField,selectNumber,start,resume,discard,finish,pick,choose,backFromLibrary,openDetail,backFromDetail,quickAdd,search:searchFor,filter:setFilter,note:(id,value)=>{state.notes[id]=value;persist()},getTemplates:()=>clone(templates),restoreTemplates};
 // Override only the Strength page. All original activity, syncing, calendar and gear functions remain intact.
 strength=function(){return window.MOTIONStrength.screen()};
 // Integrate the remember-token control into the existing settings screen. Preserve

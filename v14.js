@@ -169,8 +169,7 @@ syncNow=function(){return fetchAvailableActivities()};
 
 // Exercise/sport icon accents for the new warm palette.
 sport.run.color="#d28d57";sport.run.back="#fff0df";sport.cycle.color="#769e9b";sport.cycle.back="#eef4f1";sport.strength.color="#b39c7e";sport.strength.back="#f7f0e7";sport.tennis.color="#a69aac";sport.tennis.back="#f4eff7";
-// Re-render once after overrides load; hydrate() will render again when storage is ready.
-try{render()}catch(e){console.warn('Initial V1.4 render deferred',e)}
+// First real render occurs after IndexedDB hydration, once the overrides are installed.
 
 // Strength record usability: show the most recent real set performance per exercise.
 function priorExercisePerformance(id){const a=activities().find(x=>x.type==='strength'&&Array.isArray(x.log)&&x.log.some(v=>v.id===id&&v.sets?.length));if(!a)return '';const log=a.log.find(v=>v.id===id);return `上次 ${a.date}：${log.sets.slice(0,3).map(s=>`${s.weight} kg × ${s.reps}`).join(' · ')}${log.sets.length>3?' …':''}`}

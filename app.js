@@ -87,4 +87,4 @@ function settingsOverlay(){return `<button class="backlink" onclick="closeOverla
 function exportData(){const data={format:'motion-backup-v1',exportedAt:new Date().toISOString(),activities:state.manual,plan:state.plan,favorites:state.favorites,wishlist:state.wishlist,notes:state.notes};downloadJSON(data,'MOTION-backup-'+dateKey(new Date())+'.json');toast('备份文件已生成')}
 function downloadJSON(data,name){let blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),1500)}
 async function resetDemo(){if(!confirm('删除所有本地运动记录和个人训练设置？此操作不可撤销。'))return;await clearActivities();localStorage.removeItem(KEY);localStorage.removeItem('motion_gear_v14');location.reload()}
-render();
+// Initial render occurs after IndexedDB hydration; index.html provides the first-paint shell.

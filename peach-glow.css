@@ -1,0 +1,241 @@
+/* MOTION. · Peach Glow (2026-11-11)
+   UI-only skin inspired by the supplied pastel iOS reference.
+   No seasonal imagery; data, routes, workouts and sync logic unchanged.
+   Loaded after legacy styles so it can be reverted independently. */
+:root {
+  color-scheme: light;
+  --paper: #fff8f5;
+  --surface: #fffdfb;
+  --text: #291d1d;
+  --muted: #846c6c;
+  --line: rgba(113, 73, 72, .10);
+  --green: #e98170;
+  --lime: #ffefd9;
+  --orange: #f58f67;
+  --blue: #94b7ba;
+  --purple: #c7a5c9;
+  --shadow: 0 12px 33px rgba(137, 74, 78, .075);
+  --r: 23px;
+  --motion-pink: #f6b5c0;
+  --motion-peach: #ffa98a;
+  --motion-butter: #ffe7a5;
+  --motion-ink: #23191a;
+}
+html { background: #f3e8e5; }
+body {
+  color: var(--text);
+  background: #f8efeb;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", "Helvetica Neue", sans-serif;
+}
+.app {
+  background:
+    radial-gradient(ellipse 95% 30% at 12% 3%, rgba(255, 233, 179, .46), transparent 75%),
+    radial-gradient(ellipse 88% 42% at 95% 20%, rgba(255, 206, 209, .38), transparent 78%),
+    linear-gradient(160deg, #fffcf7 0%, #fff6f3 45%, #fff1ef 100%);
+  box-shadow: 0 14px 64px rgba(110, 61, 66, .09);
+}
+.topbar { padding-bottom: 16px; }
+.brand, .page-title, .sc-title, .sc-template-title, .gear-big, .perf-hero,
+.hero .big, .sport-card .figure, .cal-big, .cal-summary-grid strong {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", sans-serif !important;
+}
+.brand { font-size: 24px; font-weight: 830; letter-spacing: -.07em; color: var(--motion-ink); }
+.brand-dot { color: #ee8c73; }
+.micro { color: #aa8b8b; font-weight: 700; letter-spacing: .12em; }
+.page-title { font-size: 34px; font-weight: 800; letter-spacing: -.065em; color: var(--motion-ink); }
+.section-title { font-size: 17px; font-weight: 760; color: #332526; }
+.sub, .helper { color: var(--muted) !important; }
+.muted, .activity-meta, .sport-card .label, .cal-summary-grid span { color: #917b7b; }
+.small-cap, .eyebrow { color: #bc796d; }
+button:focus-visible, input:focus-visible, textarea:focus-visible,
+select:focus-visible { outline: 2px solid #e58b80; outline-offset: 2px; }
+.card, .activity-item, .exercise-row, .plan-item {
+  border-radius: 22px;
+  background: rgba(255, 255, 255, .84) !important;
+  border: 1px solid rgba(255, 255, 255, .98) !important;
+  box-shadow: 0 10px 28px rgba(161, 91, 99, .065), inset 0 1px 0 #fff !important;
+  -webkit-backdrop-filter: blur(16px) saturate(118%);
+  backdrop-filter: blur(16px) saturate(118%);
+}
+.card { overflow: hidden; }
+.icon-btn {
+  background: rgba(255, 255, 255, .80);
+  color: #5a4240;
+  border: 1px solid #fff;
+  box-shadow: 0 5px 16px rgba(160, 104, 101, .07);
+}
+.primary, .primary.small, .sc-btn.solid {
+  background: #211819 !important;
+  border: 1px solid #211819 !important;
+  color: #fff !important;
+  border-radius: 999px !important;
+  box-shadow: 0 8px 18px rgba(55, 30, 33, .13) !important;
+  font-weight: 750;
+}
+.primary:active, .sc-btn.solid:active { background: #453234 !important; filter: none; }
+.primary:disabled { opacity: .48; }
+.primary.wide { padding: 15px 18px; }
+.soft-btn {
+  color: #584042;
+  background: rgba(255, 255, 255, .88);
+  border: 1px solid #f3e2de;
+  border-radius: 999px;
+}
+.pill { background: #ffe8db; color: #895244; }
+.pill.active, .filter-line .pill.active, .v14-sync .pill.active {
+  background: linear-gradient(135deg, #ffbd86, #f49b91) !important;
+  color: #442928 !important;
+}
+.pill.outline { background: #fffaf8; color: #956d6c; border-color: #f4e4e1; }
+.nav-arrow, .backlink, .more { color: #b67468; }
+.nav-arrow { background: #fffdfb; border-color: #f5e1dd; }
+
+/* Hero: light pastel summary with dark metrics, not a dark banner. */
+.hero.card {
+  color: var(--motion-ink) !important;
+  background:
+    radial-gradient(ellipse at 4% 2%, rgba(255, 243, 185, .86), transparent 60%),
+    radial-gradient(ellipse at 91% 91%, rgba(246, 172, 195, .59), transparent 56%),
+    linear-gradient(132deg, #fff5e5, #ffe8df 57%, #fbdde6) !important;
+  border: 1px solid rgba(255, 255, 255, .96) !important;
+  box-shadow: 0 13px 31px rgba(184, 100, 105, .12) !important;
+}
+.hero:after { border-color: rgba(255, 255, 255, .20); }
+.hero .micro { color: #946f68 !important; }
+.hero .big, .hero-bottom .value, .hero-bottom .value small,
+.hero .big small { color: #332324 !important; font-weight: 760; }
+.mini-bars span { background: #f4b4a4; }
+.mini-bars span:last-child { background: #e9857a; }
+.trend-row { background: #fff0e8; }
+.sport-grid { gap: 12px; }
+.sport-card { min-height: 125px; }
+.sport-card .figure { color: #443031; font-weight: 770; }
+.sport-card .sport-ico { box-shadow: inset 0 1px 0 rgba(255,255,255,.65); }
+.sport-card:nth-child(4n + 1) .sport-ico { background: #ffddbf !important; color: #a75b37 !important; }
+.sport-card:nth-child(4n + 2) .sport-ico { background: #e9ece4 !important; color: #648c84 !important; }
+.sport-card:nth-child(4n + 3) .sport-ico { background: #f9dce6 !important; color: #b66885 !important; }
+.sport-card:nth-child(4n) .sport-ico { background: #f1e4f6 !important; color: #9d76a1 !important; }
+.activity-item { border-radius: 19px; }
+.activity-symbol { border-radius: 13px; }
+.activity-name { color: #3b292b; font-weight: 750; }
+.toggle { background: #fae9e4; border: 1px solid #fff6f2; border-radius: 17px; }
+.toggle button { color: #927a76; }
+.toggle button.active { color: #382728; background: #fffdfb; border-radius: 13px; }
+.day.today { border-color: #e5a49a; }
+.day.selected { background: #ffe5dd; border-color: #f7c9bf; }
+.day-indicator { background: #e5a49a; }
+.cal-big { color: #332526; font-weight: 800; }
+.cal-summary-grid { border-color: #f1ddd9; }
+.cal-summary-grid strong { font-weight: 750; color: #382829; }
+
+/* Pale floating bottom navigation; active tab has a peach glow. */
+.nav {
+  background: rgba(255, 248, 246, .92);
+  border-top: 1px solid rgba(255,255,255,.94);
+  box-shadow: 0 -7px 28px rgba(158, 102, 110, .075);
+  -webkit-backdrop-filter: blur(22px);
+  backdrop-filter: blur(22px);
+}
+.nav button { color: #a78e89; font-weight: 700; }
+.nav button.active { color: #553637; }
+.nav button.active svg {
+  background: linear-gradient(145deg, #ffe9a7, #ffba99 55%, #f3a0a9);
+  border-radius: 50%;
+  padding: 9px;
+  width: 40px;
+  height: 40px;
+  box-shadow: 0 4px 15px rgba(235, 146, 134, .24);
+  color: #663a33;
+}
+.nav button:not(.active) svg { margin: 8px 0; }
+
+/* Dialogs, routes and input panels: no imagery; preserve map functionality. */
+.overlay { background: linear-gradient(160deg, #fffaf5 0%, #fff3f1 100%) !important; }
+.notice, .detail-note {
+  background: #fff1e9 !important;
+  color: #825e57 !important;
+  border-color: #f4dcd4 !important;
+}
+.empty-note { background: #fffaf8; color: #907979; border-color: #efd9d6; }
+.empty-note b { color: #4d3436; }
+.search, .note-input, .sc-input, .mini-fields input,
+.sc-setrow input, .set-table input {
+  background: rgba(255,255,255,.92);
+  border-color: #ebd7d5;
+  color: #3b282b;
+}
+.form-label { color: #806562; }
+.info-field { background: #fff5f0; }
+.info-field strong, .bullet-n { color: #ad796e; }
+.anatomy-scene { background: linear-gradient(135deg, #fff3e4, #fff9f6 56%, #f7e8e9); }
+.body-base { fill: #e5cec4; stroke: #c6aaa0; }
+.muscle { fill: #dec0bc; stroke: #fff7f1; }
+.muscle.selected, .muscle.major { fill: #ed9782; filter: drop-shadow(0 1px 3px #bb76544a); }
+.muscle.secondary { fill: #efa6a4; }
+.muscle.stabilizer { fill: #bfb7a9; }
+.anatomy-tip, .view-switch button { color: #8b655f; border-color: #f1deda; background: #fffaf7; }
+.view-switch button.active { color: #fff; border-color: #332323; background: #332323; }
+.tag { color: #945c56; background: #fff1ec; border-color: #f3dfd9; }
+.exercise-icon, .sync-dot, .plan-index { color: #aa6c60 !important; background: #ffe6d8 !important; }
+.exercise-hero { background: linear-gradient(135deg, #ffc49b, #f2a3ae) !important; color: #42282a; }
+.exercise-hero .micro { color: #8f5b57; }
+.map-box, .real-route #map-fallback { background: #fff4ed; border-color: #f1deda; }
+.map-label { color: #795956; border-color: #f0e0da; background: #fffaf7ed; }
+.no-route { background: #fffaf6; border-color: #f2dbd6; color: #987b78; }
+.metric-grid strong, .split-row strong, .chart-caption { color: #5d4040; }
+.sparkline { stroke: #ec9c8e; }
+.chart-labels, .split-head { color: #a58b86; }
+
+/* Strength workspaces retain their entire interaction model. */
+.strength-core { color: #473133; }
+.sc-title, .sc-detail-head h1 { color: #281b1e; font-weight: 800; letter-spacing: -.06em; }
+.sc-kicker, .sc-headrow small { color: #aa817c; }
+.sc-headrow h2, .sc-section-title { color: #3c292b; }
+.sc-template, .sc-exercise, .sc-facts, .sc-historyitem {
+  background: rgba(255, 255, 255, .84);
+  border-color: #f3e1dc;
+  box-shadow: 0 9px 24px rgba(159, 100, 104, .055);
+}
+.sc-template:first-of-type { background: linear-gradient(135deg, #fff6dc, #ffe6e6 90%); border-color: #f5dfd1; }
+.sc-template-title, .sc-historyitem b { color: #3c282b; font-weight: 750; }
+.sc-sub, .sc-template p, .sc-exhead small, .sc-listrow small { color: #947b77; }
+.sc-btn { color: #6c4e4b; background: #fceae4; border-radius: 999px; }
+.sc-btn.outline { color: #835b57; border-color: #edd6d0; background: #fffdfb; }
+.sc-btn.quiet, .sc-back { color: #af756b; }
+.sc-topnav, .sc-bottom { background: #fbe8e4; }
+.sc-topnav button, .sc-bottom button { color: #9c807e; }
+.sc-topnav button.chosen, .sc-bottom button.chosen {
+  background: #fffdfa; color: #3c292b; border-radius: 13px;
+}
+.sc-filters button { color: #946963; background: #fffaf7; border-color: #f0dcd6; }
+.sc-filters button.sel { color: #4d2b28; background: #ffb99c; border-color: #ffb99c; }
+.sc-tags span { background: #fce7e0; color: #92665e; }
+.sc-check.done { background: #ee9884; border-color: #ee9884; }
+.sc-resume, .sc-timer { background: #fff0e5; border-color: #eed9d0; color: #875d55; }
+.sc-setrow input:focus, .sc-input:focus { outline-color: #ee9b8c; }
+
+/* Equipment, sync and performance use the same palette. */
+.gear-head { background: linear-gradient(120deg, #ffefd6, #ffdfdf 72%, #fce9f1); box-shadow: 0 8px 24px #d9a2a51f; }
+.gear-big, .shoe-km { color: #4b3031; font-weight: 770; }
+.gear-tile, .sync-record { background: #fffefa; border-color: #f1dfda; }
+.shoe-graphic { background: linear-gradient(145deg, #ffeecb, #ffe2e6); }
+.shoe-graphic span { color: #c88777; }
+.sync-bottom { background: #fff9f6ee; border-color: #f0dbd6; }
+.sync-shoe select { background: #fff9f6; color: #775651; border-color: #e7d4cf; }
+.sync-check input, .motion-remember-row input { accent-color: #e88e7d; }
+.perf-tabs { background: #fce9e3; }
+.perf-tabs button { color: #9b7b77; }
+.perf-tabs button.active { color: #472e31; background: #fffdfa; }
+.perf-card { background: #fffaf7; color: #5f4545; border-color: #f0dcd6; }
+.perf-card h3, .perf-hero, .perf-value { color: #3b272b; }
+.perf-notice { background: #fff2e8; border-color: #f4dbd1; color: #835c55; }
+.perf-dist-buttons button { color: #916e68; background: #fffbf9; border-color: #f0dcd5; }
+.perf-dist-buttons button.active { color: #3e2424; background: #ffc1a0; border-color: #ffc1a0; }
+.toast { background: #291c1e; color: #fff; }
+/* Accessible reduced-motion preferences. */
+@media (prefers-reduced-motion: reduce) {
+  .activity-item, .icon-btn, .anatomy-canvas { transition: none !important; }
+}
+@media (min-width: 500px) {
+  .app { border: 1px solid rgba(255,255,255,.95); }
+}

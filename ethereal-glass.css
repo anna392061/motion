@@ -1,0 +1,358 @@
+/* MOTION. / ETHEREAL GLASS — 2026-11-11
+   Smoked glass, diffused aurora light, organic iridescence, dotted display type.
+   CSS-only ambient lighting: no external image assets, fonts or JavaScript.
+   Designed for iPhone PWA; performance-conscious blur limited to focal surfaces. */
+:root{
+  color-scheme:dark;
+  --paper:#151c1d;
+  --surface:rgba(36,43,42,.64);
+  --text:#faf5eb;
+  --muted:#c7c6be;
+  --line:rgba(255,250,234,.20);
+  --green:#b8d5b4;
+  --lime:#dbdaae;
+  --orange:#f6ad9a;
+  --blue:#a5d7d5;
+  --purple:#dbc1f5;
+  --shadow:0 17px 42px rgba(0,0,0,.23);
+  --r:29px;
+  --eg-ink:#111819;
+  --eg-white:#faf8ed;
+  --eg-quiet:#c7c4bf;
+  --eg-peach:#f7baa4;
+  --eg-mint:#b4e1d5;
+  --eg-lilac:#e0c4f2;
+  --eg-edge:rgba(255,255,255,.24);
+}
+html{background:#11181a;color-scheme:dark}
+body{
+  background:linear-gradient(160deg,#12181a 0%,#252b27 55%,#1b2023 100%);
+  color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","PingFang SC","Helvetica Neue",sans-serif;
+}
+.app{
+  background:
+    radial-gradient(ellipse 68% 21% at 5% 4%,rgba(162,146,91,.42),transparent 92%),
+    radial-gradient(ellipse 77% 29% at 93% 15%,rgba(116,139,112,.34),transparent 86%),
+    radial-gradient(ellipse 63% 24% at 4% 47%,rgba(116,76,81,.37),transparent 88%),
+    radial-gradient(ellipse 82% 24% at 97% 63%,rgba(102,103,133,.34),transparent 88%),
+    radial-gradient(ellipse 80% 18% at 25% 85%,rgba(84,136,121,.29),transparent 91%),
+    linear-gradient(154deg,#171e1e 2%,#242522 35%,#181b1f 74%,#1c2624 100%);
+  color:var(--text);
+  box-shadow:0 22px 75px rgba(4,8,9,.32);
+}
+.topbar{padding-top:calc(27px + env(safe-area-inset-top));padding-bottom:18px}
+.brand{
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display",sans-serif!important;
+  font-weight:780;font-size:25px;letter-spacing:-.06em;color:var(--eg-white);
+}
+.brand-dot{color:#efc7b6}
+.micro,.small-cap{color:#d3d0c5;font-size:10px;letter-spacing:.13em;font-weight:680}
+.topbar .micro{color:#d5d3c8;opacity:.76}
+.page-title,.sc-title,.sc-template-title,.cal-big,.gear-big,.perf-hero,
+.hero .big,.sport-card .figure{
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","PingFang SC",sans-serif!important;
+}
+.page-title{font-size:34px;font-weight:740;letter-spacing:-.06em;color:var(--eg-white);line-height:1.15}
+.section-title{font-size:17px;font-weight:720;letter-spacing:-.025em;color:var(--eg-white)}
+.sub,.helper{color:#c8c5bf!important;line-height:1.65}
+.muted,.daylabel,.activity-meta,.sport-card .label,.chart-labels,.split-head{color:#d0ccc6!important}
+.eyebrow,.small-cap{color:#e6caba}
+.more,.backlink{color:#d9d4d0;font-weight:700}
+.icon-btn{
+  background:rgba(255,255,255,.11);
+  color:#f6f2eb;border:1px solid rgba(255,255,255,.23);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.19),0 9px 18px rgba(0,0,0,.09);
+}
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{
+  outline:2px solid #d7d1fa;outline-offset:2px;
+}
+.card,.activity-item,.exercise-row,.plan-item{
+  background:linear-gradient(133deg,rgba(255,255,255,.18),rgba(241,229,213,.07) 62%,rgba(255,255,255,.085))!important;
+  border:1px solid var(--eg-edge)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.24),0 13px 32px rgba(0,0,0,.13)!important;
+  color:var(--eg-white);border-radius:29px;
+}
+/* Only the principal glass surfaces are blurred, avoiding a scroll-heavy effect. */
+.hero.card,.sport-card,.cal-summary,.nav{
+  -webkit-backdrop-filter:blur(12px) saturate(128%);
+  backdrop-filter:blur(12px) saturate(128%);
+}
+.activity-item,.exercise-row,.plan-item{border-radius:22px}
+.card{overflow:hidden}
+.primary,.primary.small,.sc-btn.solid{
+  background:rgba(14,17,19,.86)!important;
+  color:#fffaf2!important;
+  border:1px solid rgba(255,255,255,.28)!important;
+  border-radius:999px!important;
+  font-weight:720;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.13),0 9px 18px rgba(0,0,0,.16)!important;
+}
+.primary:active,.sc-btn.solid:active{filter:brightness(1.22)}
+.primary:disabled{opacity:.42}
+.primary.wide{padding:15px 17px}
+.soft-btn,.pill,.nav-arrow{
+  background:rgba(255,255,255,.11)!important;
+  color:#faf5eb!important;
+  border:1px solid rgba(255,255,255,.19)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.10);
+}
+.soft-btn{border-radius:999px}
+.pill{border-radius:99px;background:rgba(230,207,225,.17)!important;color:#f8edf4!important}
+.pill.active,.filter-line .pill.active,.v14-sync .pill.active{
+  color:#201a20!important;
+  background:linear-gradient(120deg,#c5f0db,#e3c6f7 65%,#ffc2af)!important;
+  border-color:rgba(255,255,255,.60)!important;
+}
+.pill.outline{color:#e5dbd6!important}
+.nav-arrow{font-size:19px}
+
+/* The featured summary reads like an atmospheric, lit glass object. */
+.hero.card{
+  position:relative;isolation:isolate;min-height:230px;padding:27px 23px 24px;
+  background:
+    radial-gradient(ellipse 76% 82% at 5% 1%,rgba(255,205,160,.30),transparent 79%),
+    radial-gradient(ellipse 73% 74% at 99% 98%,rgba(174,154,235,.34),transparent 80%),
+    linear-gradient(118deg,rgba(39,42,39,.84),rgba(60,67,56,.78) 54%,rgba(69,54,71,.79))!important;
+  border:1px solid rgba(255,249,232,.35)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.30),0 20px 44px rgba(0,0,0,.25)!important;
+}
+.hero.card::before{
+  content:"MOTION";
+  pointer-events:none;position:absolute;right:17px;top:13px;
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display",sans-serif;
+  font-size:39px;font-weight:900;letter-spacing:.03em;line-height:1.2;
+  color:transparent;-webkit-text-fill-color:transparent;
+  background:radial-gradient(circle,rgba(255,255,255,.68) 1px,transparent 1.65px) 0 0/5.4px 5.4px;
+  -webkit-background-clip:text;background-clip:text;
+  opacity:.42;z-index:0;
+}
+.hero.card::after{width:140px;height:140px;right:-80px;top:-75px;border-color:rgba(255,255,255,.09)}
+.hero.card>*{position:relative;z-index:1}
+.hero .micro{color:#eae5d6!important;letter-spacing:.15em}
+.hero .big{color:#fffdf3!important;font-size:49px;font-weight:730;letter-spacing:-.065em}
+.hero .big small,.hero-bottom .value small{color:#eee9db!important;font-weight:500}
+.hero-bottom .value{color:#fff9ed;font-size:22px;font-weight:730}
+.mini-bars span{background:rgba(194,235,203,.60)}
+.mini-bars span:last-child{background:#dfc2f2}
+.trend-row{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.07);height:10px}
+
+/* The four sports are softly iridescent, not a grid of flat white tiles. */
+.sport-grid{gap:11px}
+.sport-card{min-height:128px;padding:17px}
+.sport-card:nth-child(4n+1){
+  background:linear-gradient(135deg,rgba(222,171,141,.26),rgba(126,105,94,.22) 55%,rgba(255,255,255,.065))!important;
+}
+.sport-card:nth-child(4n+2){
+  background:linear-gradient(135deg,rgba(121,185,166,.24),rgba(73,103,96,.18) 55%,rgba(255,255,255,.06))!important;
+}
+.sport-card:nth-child(4n+3){
+  background:linear-gradient(135deg,rgba(205,148,184,.21),rgba(114,93,124,.23) 60%,rgba(255,255,255,.06))!important;
+}
+.sport-card:nth-child(4n){
+  background:linear-gradient(135deg,rgba(173,175,216,.23),rgba(93,116,138,.20) 60%,rgba(255,255,255,.06))!important;
+}
+.sport-card .figure{font-size:26px;font-weight:760;letter-spacing:-.05em;color:#fffaf3}
+.sport-card .label{color:#e2d9d6!important;font-size:11px}
+.sport-card .sport-ico{border-radius:17px;box-shadow:0 6px 15px rgba(0,0,0,.13)}
+.activity-name,.activity-item strong{color:#fffaf1;font-weight:720}
+.activity-symbol{border-radius:15px;box-shadow:0 5px 13px rgba(0,0,0,.12)}
+.right-chev{color:#d4cfc7}
+.notice,.detail-note{
+  color:#ede3dc!important;
+  background:rgba(230,213,202,.10)!important;
+  border:1px solid rgba(255,255,255,.18)!important;
+}
+.empty-note{color:#e0d8cf;border:1px dashed rgba(255,255,255,.22);background:rgba(255,255,255,.06)}
+.empty-note b{color:#fff8ec}
+
+/* Navigation remains readable on every screen and safely above iOS's bottom area. */
+.nav{
+  background:rgba(24,31,31,.87);
+  border-top:1px solid rgba(255,255,255,.24);
+  box-shadow:0 -9px 28px rgba(0,0,0,.23);
+  -webkit-backdrop-filter:blur(19px) saturate(125%);
+  backdrop-filter:blur(19px) saturate(125%);
+}
+.nav button{color:#d1cec7;font-weight:650}
+.nav button.active{color:#faf7ef}
+.nav button.active svg{
+  width:39px;height:39px;
+  padding:9px;
+  margin:-4px 0 -1px;
+  border-radius:50%;
+  color:#27242b;
+  background:linear-gradient(135deg,#e9c6f3 0%,#bee2c8 51%,#fed5b7 100%);
+  box-shadow:0 5px 17px rgba(199,187,203,.25),inset 0 1px 0 rgba(255,255,255,.55);
+}
+
+/* The calendar, tabs and interactive details stay functional. */
+.cal-big{font-weight:780;color:#fffaf0}
+.cal-summary-grid{border-color:rgba(255,255,255,.19)}
+.cal-summary-grid strong{font-weight:730;color:#fbf7ee}
+.day{color:#fcf6ee}
+.day.today{border-color:rgba(231,205,240,.55)}
+.day.selected{background:rgba(230,203,241,.22);border-color:rgba(230,203,241,.4)}
+.day-indicator{background:#e6c3de}
+.day-icons span{box-shadow:0 2px 5px rgba(0,0,0,.16)}
+.toggle,.sc-topnav,.sc-bottom,.perf-tabs{
+  background:rgba(9,14,16,.32)!important;
+  border:1px solid rgba(255,255,255,.14)!important;
+  border-radius:19px;
+}
+.toggle button,.sc-topnav button,.sc-bottom button,.perf-tabs button{color:#c9c6c3}
+.toggle button.active,.sc-topnav button.chosen,.sc-bottom button.chosen,.perf-tabs button.active{
+  color:#fcf7f0!important;
+  background:rgba(255,255,255,.18)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.22),0 3px 10px rgba(0,0,0,.10);
+}
+.overlay{
+  color:#fcf8ef;
+  background:
+    radial-gradient(ellipse 68% 24% at 0% 5%,rgba(156,124,97,.32),transparent 88%),
+    radial-gradient(ellipse 83% 36% at 110% 69%,rgba(114,109,146,.24),transparent 90%),
+    linear-gradient(160deg,#222928,#1c2324 55%,#24242a) !important;
+}
+.overlay h1,.overlay h2,.overlay h3{color:#fbf7ef}
+.search,.note-input,.sc-input,.mini-fields input,.sc-setrow input,.set-table input,
+input[type=number],select,textarea{
+  color:#faf6ec;
+  background:rgba(13,19,21,.42);
+  border:1px solid rgba(255,255,255,.23);
+}
+.search::placeholder,.note-input::placeholder,.sc-input::placeholder,
+input::placeholder,textarea::placeholder{color:#bcb8b2;opacity:1}
+.search:focus,.note-input:focus,.sc-input:focus{outline-color:#e3c7ef}
+.form-label,.form-label small{color:#e0d6d1}
+.info-field{background:rgba(255,255,255,.09);color:#f5eee6}
+.info-field strong{color:#e8cbbd}
+.info-field span,.practical-field p,.anatomy-extra,.anatomy-extra summary{color:#e1d8d0}
+.bullet-line{color:#eee7e0}
+.bullet-n{color:#d2e5d4}
+.tag{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.20);color:#faf3e9}
+.exercise-icon,.sync-dot,.plan-index{background:rgba(209,185,221,.21)!important;color:#f0d4ef!important}
+.exercise-hero{
+  color:#fdf9f1;
+  background:linear-gradient(115deg,rgba(103,111,88,.86),rgba(79,65,84,.85))!important;
+  border:1px solid rgba(255,255,255,.24);
+}
+.exercise-hero .micro{color:#e3e1d6}
+.metric-grid{background:transparent!important}
+.metric-grid small,.route-footer,.chart-caption,.chart-labels{color:#d3ccc5}
+.metric-grid strong{color:#fcf8f0}
+.map-box{background:#223232;border:1px solid rgba(255,255,255,.20)}
+.map-label{color:#3c3337;background:rgba(255,251,244,.92);border-color:#fff}
+.real-route #map-fallback{background:#263536}
+.real-route .leaflet-container{background:#293737}
+.no-route{color:#ede1d7;border:1px dashed rgba(255,255,255,.22);background:rgba(255,255,255,.08)}
+.sparkline{stroke:#c5ecdf}
+.chart-caption{color:#e7dacb}
+.split-head,.split-row{border-color:rgba(255,255,255,.17)}
+.split-row strong{color:#faf7f0}
+
+/* Strength-specific custom components have their own hard-coded legacy colors. */
+.strength-core{color:#f7f1e8}
+.sc-kicker{color:#e4cbbd}
+.sc-title,.sc-detail-head h1{font-weight:750;color:#faf7ed}
+.sc-sub,.sc-headrow small,.sc-template p,.sc-exhead small,.sc-performance-date{color:#cbc5bd}
+.sc-headrow h2,.sc-section-title,.sc-performance,.sc-listrow b,.sc-historyitem b{color:#faf6ed}
+.sc-template,.sc-exercise,.sc-facts,.sc-historyitem{
+  background:linear-gradient(125deg,rgba(255,255,255,.16),rgba(255,255,255,.07))!important;
+  color:#fff9ed;border:1px solid rgba(255,255,255,.23);
+  border-radius:26px;box-shadow:0 10px 26px rgba(0,0,0,.15);
+}
+.sc-template:first-of-type{
+  background:linear-gradient(123deg,rgba(182,164,112,.24),rgba(181,122,152,.15) 72%,rgba(255,255,255,.07))!important;
+  border-color:rgba(255,255,255,.25);
+}
+.sc-template-title{color:#fcf7e9;font-weight:760}
+.sc-btn{background:rgba(255,255,255,.14);color:#f1e8df;border-radius:99px}
+.sc-btn.outline{background:rgba(255,255,255,.09);color:#f6ebe4;border:1px solid rgba(255,255,255,.25)}
+.sc-btn.quiet,.sc-back{color:#e2c9c6}
+.sc-label,.sc-setrow label,.sc-setrow>span{color:#dcd4ce}
+.sc-input,.sc-setrow input{color:#fbf8ef;background:rgba(10,17,18,.35);border-color:rgba(255,255,255,.25)}
+.sc-check{color:#e8d8e9;background:rgba(255,255,255,.09);border-color:rgba(255,255,255,.25)}
+.sc-check.done{background:#c5a7d3;color:#192324;border-color:#c5a7d3}
+.sc-listrow,.sc-factrow,.sc-historyline{border-color:rgba(255,255,255,.16)}
+.sc-factrow>b,.sc-factrow>span,.sc-cues,.sc-historyline b{color:#e5dbd4}
+.sc-tags span{background:rgba(231,205,224,.18);color:#fbebf6}
+.sc-filters button{background:rgba(255,255,255,.1);color:#f7efe7;border-color:rgba(255,255,255,.19)}
+.sc-filters button.sel{background:#d7c1df;color:#241f27;border-color:#d7c1df}
+.sc-timer,.sc-resume{background:rgba(246,201,166,.18);border-color:rgba(255,255,255,.24);color:#f5e8df}
+.sc-empty{color:#e2d6d1;border-color:rgba(255,255,255,.24)}
+.motion-remember-row{color:#f7efea}
+.motion-remember-row small{color:#ddd1cb}
+.motion-remember-row input{accent-color:#d9b6e8}
+
+/* Equipment, sync and performance: glass panels without changing any data. */
+.gear-head{
+  color:#faf7ef;
+  background:linear-gradient(124deg,rgba(161,166,115,.36),rgba(120,103,132,.30) 74%,rgba(151,112,112,.20))!important;
+  border:1px solid rgba(255,255,255,.23);
+  box-shadow:0 9px 25px rgba(0,0,0,.14);
+}
+.gear-big,.gear-tile strong,.shoe-km,.perf-hero{color:#faf5ea}
+.gear-tile,.sync-record{
+  background:rgba(255,255,255,.12);color:#f8f3e9;
+  border:1px solid rgba(255,255,255,.23);
+}
+.shoe-graphic{background:linear-gradient(130deg,rgba(189,191,153,.35),rgba(165,153,193,.24))}
+.shoe-graphic span{color:#efe3da}
+.gear-sub,.sync-state,.sync-info small,.sync-provider small{color:#d7ccc6}
+.gear-editor-backdrop{background:rgba(5,10,11,.60)}
+.gear-editor,.sync-bottom{background:#232a29;color:#f7f1ea}
+.gear-editor .form-label,.sync-bottom .spread{color:#e7ded5}
+.sync-shoe,.sync-provider strong{color:#eee4de}
+.sync-shoe select{background:#27302e;color:#fff9ed;border-color:rgba(255,255,255,.21)}
+.sync-check input[type=checkbox]{accent-color:#c8bad9}
+.sync-record.already-imported{opacity:.54}
+.perf-card{
+  background:linear-gradient(125deg,rgba(255,255,255,.16),rgba(255,255,255,.065));
+  color:#f9f3e9;border:1px solid rgba(255,255,255,.24);
+}
+.perf-card h3,.perf-value,.perf-history button,.perf-small{color:#fbf6ed}
+.perf-notice{background:rgba(237,204,174,.12);border-color:rgba(255,255,255,.22);color:#fbf3e9}
+.perf-notice small,.perf-sub,.perf-note,.perf-spread small,.perf-history button small{color:#dcd1c9}
+.perf-dist-buttons button{background:rgba(255,255,255,.10);border-color:rgba(255,255,255,.23);color:#f4ebe6}
+.perf-dist-buttons button.active{background:linear-gradient(120deg,#cde8d9,#e3c7f2);border-color:transparent;color:#24232c}
+.perf-history button{border-color:rgba(255,255,255,.16)}
+.perf-history button strong{color:#faf6ed}
+.toast{background:#171d1e;color:#fef7ed;border:1px solid rgba(255,255,255,.25)}
+
+/* System controls and edge cases */
+.settings-row{border-color:rgba(255,255,255,.15)}
+.settings-row b{color:#fbf7ef}
+.settings-row small{color:#d6cdc8}
+.sync-provider{border-color:rgba(255,255,255,.15)}
+.sync-step,.plan-block{color:#fbf6ed}
+.sync-strength-match,.strength-link-card,.link-source-grid>div{
+  background:rgba(255,255,255,.12);
+  color:#f9f1e9;
+  border-color:rgba(255,255,255,.23);
+}
+.sync-strength-match strong,.link-source-grid strong{color:#fff8ee}
+.sync-strength-match p,.link-source-grid small{color:#ddd3cb}
+.sync-strength-match .search{background:rgba(10,16,17,.44)}
+body input[type=checkbox]{accent-color:#d7c1e7}
+@media(max-width:390px){
+  .hero.card::before{font-size:29px}
+  .hero .big{font-size:44px}
+  .sport-card{padding:14px}
+}
+@media(min-width:500px){
+  .app{border:1px solid rgba(255,255,255,.20)}
+  .nav{border-radius:0 0 28px 28px}
+}
+/* Respect users who disable blur/transparency, as well as older browsers. */
+@supports not ((-webkit-backdrop-filter:blur(1px)) or (backdrop-filter:blur(1px))){
+  .hero.card,.sport-card,.cal-summary,.nav{background-color:rgba(38,43,43,.97)!important}
+}
+@media(prefers-reduced-transparency:reduce){
+  .hero.card,.sport-card,.cal-summary,.nav,.card,.activity-item,.overlay{
+    -webkit-backdrop-filter:none!important;backdrop-filter:none!important;
+    background-color:#27302f!important;
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  .activity-item,.anatomy-canvas,.icon-btn{transition:none!important}
+}

@@ -1,0 +1,240 @@
+/* MOTION. · Peach Glow Glass · 2026-11-11
+   Keep the approved Peach Glow palette and black pill buttons.
+   Add light, environment-tinted frosted glass with subtle specular edges.
+   Designed as a removable overlay on top of peach-glow.css.
+   No data, sync, performance logic, routes, scripts, images or external fonts. */
+:root{
+  color-scheme:light;
+  --paper:#fff9f6;
+  --surface:rgba(255,255,255,.68);
+  --text:#302425;
+  --muted:#806b68;
+  --line:rgba(165,120,113,.15);
+  --green:#e98170;
+  --lime:#fff0df;
+  --orange:#f38f70;
+  --blue:#91b7b1;
+  --purple:#c5a5c8;
+  --shadow:0 12px 32px rgba(157,95,97,.105);
+  --r:25px;
+  --pgg-white:rgba(255,255,255,.64);
+  --pgg-line:rgba(255,255,255,.93);
+  --pgg-ink:#302326;
+}
+html{background:#f6ecea;color-scheme:light}
+body{color:var(--text);background:#f8eeeb}
+.app{
+  color:var(--text);
+  background:
+    radial-gradient(ellipse 105% 18% at 5% 3%,rgba(255,230,158,.69),transparent 85%),
+    radial-gradient(ellipse 105% 24% at 98% 27%,rgba(250,188,201,.60),transparent 88%),
+    radial-gradient(ellipse 90% 19% at -13% 55%,rgba(236,198,225,.30),transparent 89%),
+    radial-gradient(ellipse 94% 22% at 102% 74%,rgba(243,190,153,.40),transparent 84%),
+    radial-gradient(ellipse 92% 17% at 7% 96%,rgba(255,223,184,.49),transparent 87%),
+    linear-gradient(165deg,#fffbf5 0%,#fff4f1 49%,#fff8f4 100%);
+  box-shadow:0 16px 68px rgba(154,96,104,.10);
+}
+/* Readability is prioritized over blur: all text and stats stay opaque. */
+.brand,.page-title,.section-title,.sport-card .figure,.cal-big,.cal-summary-grid strong{color:#302326}
+.brand{font-weight:830;letter-spacing:-.065em}
+.micro{color:#9b807c}
+.sub,.helper{color:#816e6b!important}
+.muted,.activity-meta,.sport-card .label{color:#856c69}
+.icon-btn{
+  background:rgba(255,255,255,.57);
+  border:1px solid rgba(255,255,255,.88);
+  color:#614743;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.95),0 6px 15px rgba(180,121,116,.09);
+  -webkit-backdrop-filter:blur(9px) saturate(120%);
+  backdrop-filter:blur(9px) saturate(120%);
+}
+.card,.activity-item,.exercise-row,.plan-item{
+  position:relative;
+  color:var(--pgg-ink);
+  background:linear-gradient(134deg,rgba(255,255,255,.72),rgba(255,248,245,.53) 70%,rgba(255,241,240,.43))!important;
+  border:1px solid rgba(255,255,255,.91)!important;
+  border-radius:25px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.99),inset 1px 0 0 rgba(255,255,255,.33),0 12px 29px rgba(159,104,105,.095),0 3px 9px rgba(198,131,123,.045)!important;
+}
+.card{overflow:hidden}
+/* Limit blurred elements to a few hero/floating components to avoid heavy scrolling. */
+.hero.card,.sport-card,.cal-summary,.nav,.overlay .card{
+  -webkit-backdrop-filter:blur(14px) saturate(128%);
+  backdrop-filter:blur(14px) saturate(128%);
+}
+.activity-item,.exercise-row,.plan-item{
+  border-radius:21px;
+  background:rgba(255,255,255,.69)!important;
+}
+.activity-name,.activity-item strong{color:#392a2b}
+.primary,.primary.small,.sc-btn.solid{
+  background:#231a1c!important;
+  border-color:#231a1c!important;
+  border-radius:999px!important;
+  color:#fff!important;
+  box-shadow:0 9px 19px rgba(72,39,44,.16),inset 0 1px 0 rgba(255,255,255,.08)!important;
+}
+.soft-btn,.nav-arrow{
+  color:#6f4d47;
+  background:rgba(255,255,255,.56);
+  border:1px solid rgba(255,255,255,.89);
+  box-shadow:inset 0 1px 0 #fff,0 4px 13px rgba(176,112,111,.075);
+  border-radius:999px;
+}
+.pill{
+  color:#8f5f55;
+  background:rgba(255,230,218,.74);
+  border:1px solid rgba(255,255,255,.70);
+}
+.pill.outline{background:rgba(255,255,255,.50);color:#936e68}
+.pill.active,.filter-line .pill.active,.v14-sync .pill.active{
+  background:linear-gradient(125deg,#ffe2ae,#f7aab0)!important;
+  border-color:rgba(255,255,255,.85)!important;
+  color:#493331!important;
+}
+/* The main summary is a luminous glass panel rather than a flat gradient block. */
+.hero.card{
+  color:#2d2325!important;
+  background:
+    radial-gradient(ellipse 90% 115% at -8% -8%,rgba(255,234,172,.84),transparent 75%),
+    radial-gradient(ellipse 100% 105% at 113% 110%,rgba(248,171,192,.63),transparent 76%),
+    linear-gradient(135deg,rgba(255,255,255,.59),rgba(255,235,228,.53))!important;
+  border:1px solid rgba(255,255,255,.94)!important;
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.85),0 17px 35px rgba(199,124,121,.13)!important;
+}
+.hero:after{border-color:rgba(255,255,255,.24)}
+.hero .big,.hero-bottom .value,.hero .big small,.hero-bottom .value small{color:#35272a!important}
+.hero .micro{color:#94706d!important}
+.hero .big{font-weight:790}
+.mini-bars span{background:rgba(231,147,143,.70)}
+.mini-bars span:last-child{background:#e48689}
+.trend-row{background:rgba(255,255,255,.60)}
+/* Colored glass: hints of each sport, never loud opaque tiles. */
+.sport-grid{gap:12px}
+.sport-card:nth-child(4n+1){
+  background:linear-gradient(135deg,rgba(255,253,246,.77),rgba(255,220,208,.61) 65%,rgba(255,241,235,.47))!important;
+}
+.sport-card:nth-child(4n+2){
+  background:linear-gradient(135deg,rgba(255,255,251,.76),rgba(219,239,229,.55) 70%,rgba(255,248,243,.43))!important;
+}
+.sport-card:nth-child(4n+3){
+  background:linear-gradient(140deg,rgba(255,253,252,.80),rgba(246,220,238,.60) 67%,rgba(255,244,249,.52))!important;
+}
+.sport-card:nth-child(4n){
+  background:linear-gradient(140deg,rgba(255,254,248,.80),rgba(255,238,196,.61) 73%,rgba(255,248,234,.48))!important;
+}
+.sport-card .figure{font-weight:790}
+.sport-card .sport-ico{border:1px solid rgba(255,255,255,.70);box-shadow:inset 0 1px 0 rgba(255,255,255,.85)}
+/* Calendar and controls use coherent glass layers. */
+.cal-summary-grid{border-color:rgba(171,122,117,.13)}
+.day.today{border-color:#e6b1a5}
+.day.selected{background:rgba(255,215,209,.68);border-color:rgba(235,170,159,.63)}
+.toggle,.sc-topnav,.sc-bottom,.perf-tabs{
+  background:rgba(255,242,239,.70)!important;
+  border:1px solid rgba(255,255,255,.85)!important;
+  border-radius:19px;
+}
+.toggle button.active,.sc-topnav button.chosen,.sc-bottom button.chosen,.perf-tabs button.active{
+  color:#59413d;
+  background:rgba(255,255,255,.80)!important;
+  border-radius:14px;
+  box-shadow:inset 0 1px 0 #fff,0 3px 8px rgba(173,115,111,.10);
+}
+/* Frosted floating bottom navigation keeps the iPhone safe-area. */
+.nav{
+  background:rgba(255,248,247,.64);
+  border-top:1px solid rgba(255,255,255,.95);
+  box-shadow:0 -8px 26px rgba(178,114,119,.085),inset 0 1px 0 rgba(255,255,255,.9);
+  -webkit-backdrop-filter:blur(22px) saturate(138%);
+  backdrop-filter:blur(22px) saturate(138%);
+}
+.nav button{color:#a18480}
+.nav button.active{color:#6f4847}
+.nav button.active svg{
+  border:1px solid rgba(255,255,255,.74);
+  background:linear-gradient(140deg,#ffe6ad 0%,#ffc3aa 55%,#f4a7b4 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.64),0 5px 14px rgba(227,151,140,.24);
+}
+/* Dialogs are light airy surfaces, never smoked/dark glass. */
+.overlay{
+  color:#332627;
+  background:
+    radial-gradient(ellipse 90% 25% at 6% -4%,rgba(255,225,175,.73),transparent 88%),
+    radial-gradient(ellipse 90% 32% at 100% 73%,rgba(249,195,211,.48),transparent 90%),
+    linear-gradient(170deg,#fffbf7,#fff2f0 75%,#fff9f5) !important;
+}
+.overlay .card{
+  background:linear-gradient(135deg,rgba(255,255,255,.75),rgba(255,249,247,.54))!important;
+}
+.overlay h1,.overlay h2,.overlay h3{color:#332728}
+.search,.note-input,.sc-input,.mini-fields input,.sc-setrow input,.set-table input{
+  background:rgba(255,255,255,.77);
+  border:1px solid rgba(217,174,158,.45);
+  color:#3f2d2c;
+}
+.search::placeholder,.note-input::placeholder,.sc-input::placeholder{color:#a08b85}
+.form-label{color:#8f655b}
+.notice,.detail-note{
+  background:rgba(255,239,226,.69)!important;
+  border-color:rgba(255,255,255,.84)!important;
+  color:#835d56!important;
+}
+.map-box{background:#fff1e7;border-color:rgba(240,207,196,.78)}
+.map-label{background:rgba(255,250,245,.87);color:#906e60}
+.no-route{background:rgba(255,249,246,.82);color:#90726d}
+.metric-grid{background:rgba(255,255,255,.16)!important}
+.metric-grid strong,.chart-caption,.split-row strong{color:#674541}
+.sparkline{stroke:#d58980}
+/* Strength: keep all edit, log, set and anatomy interactions untouched. */
+.strength-core,.sc-title,.sc-detail-head h1{color:#593f39}
+.sc-template,.sc-exercise,.sc-facts,.sc-historyitem{
+  background:linear-gradient(135deg,rgba(255,255,255,.76),rgba(255,248,246,.58))!important;
+  border:1px solid rgba(255,255,255,.92);
+  box-shadow:inset 0 1px 0 #fff,0 10px 25px rgba(158,106,97,.085);
+  border-radius:24px;
+}
+.sc-template:first-of-type{
+  background:linear-gradient(130deg,rgba(255,247,222,.76),rgba(255,225,220,.66))!important;
+  border-color:rgba(255,255,255,.92);
+}
+.sc-btn{background:rgba(255,239,230,.70);color:#925d51;border-radius:999px}
+.sc-btn.outline{background:rgba(255,255,255,.71);border-color:rgba(255,255,255,.92)}
+.sc-resume,.sc-timer{background:rgba(255,239,220,.73);border-color:rgba(255,255,255,.8)}
+.sc-setrow input,.sc-input{background:rgba(255,255,255,.77);color:#603d36}
+.sc-check.done{background:#e99b83;color:#fff;border-color:#e99b83}
+/* Equipment, sync, performance: retain data hierarchy with translucent shells. */
+.gear-head{
+  background:
+    radial-gradient(ellipse at 5% 10%,rgba(255,234,166,.63),transparent 66%),
+    linear-gradient(128deg,rgba(255,246,234,.72),rgba(255,220,228,.68))!important;
+  border:1px solid rgba(255,255,255,.91);
+  box-shadow:inset 0 1px 0 #fff,0 12px 29px rgba(178,111,104,.09);
+}
+.gear-tile,.sync-record,.perf-card{
+  background:linear-gradient(135deg,rgba(255,255,255,.78),rgba(255,245,242,.60))!important;
+  border:1px solid rgba(255,255,255,.91);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 7px 20px rgba(160,108,104,.07);
+}
+.shoe-graphic{background:linear-gradient(135deg,rgba(255,225,201,.60),rgba(255,245,239,.70))}
+.gear-editor{background:linear-gradient(165deg,rgba(255,250,246,.97),rgba(255,240,238,.95));color:#432e2e}
+.gear-editor-backdrop{background:rgba(68,47,53,.26);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.sync-bottom{background:rgba(255,248,245,.88);border-color:rgba(255,255,255,.83)}
+.perf-card,.perf-value,.perf-hero{color:#583d38}
+.perf-notice{background:rgba(255,241,234,.68);border:1px solid rgba(255,255,255,.8)}
+.perf-dist-buttons button{background:rgba(255,255,255,.70);border-color:rgba(255,255,255,.83)}
+.perf-dist-buttons button.active{background:linear-gradient(135deg,#ffe1b5,#f5b4aa);color:#5e3f37;border-color:rgba(255,255,255,.80)}
+.sync-strength-match,.link-source-grid>div,.strength-link-card{background:rgba(255,255,255,.69);border-color:rgba(255,255,255,.90)}
+.toast{background:#342326;color:#fff}
+/* Accessibility and battery. */
+@supports not ((-webkit-backdrop-filter:blur(1px)) or (backdrop-filter:blur(1px))){
+  .hero.card,.sport-card,.cal-summary,.nav,.overlay .card{background-color:rgba(255,250,247,.94)!important}
+}
+@media (prefers-reduced-transparency:reduce){
+  .hero.card,.sport-card,.cal-summary,.nav,.overlay .card{
+    -webkit-backdrop-filter:none!important;
+    backdrop-filter:none!important;
+    background-color:rgba(255,250,247,.97)!important;
+  }
+}
+@media(prefers-reduced-motion:reduce){.activity-item,.icon-btn,.anatomy-canvas{transition:none!important}}
+@media(min-width:500px){.app{border:1px solid rgba(255,255,255,.9)}}

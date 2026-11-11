@@ -5,13 +5,13 @@
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#fff9f6",
-  "theme_color": "#fff6f1",
+  "background_color": "#F9F6F1",
+  "theme_color": "#F9F6F1",
   "icons": [
     {
-      "src": "./icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "./assets/brand/app-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
       "purpose": "any maskable"
     }
   ]

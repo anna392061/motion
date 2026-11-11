@@ -142,3 +142,12 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px soli
   .cs-week-surface .hero .big{font-size:40px!important}
 }
 @media(prefers-reduced-motion:reduce){.cs-home button{transition:none!important;animation:none!important}}
+/* Source PNGs include transparent breathing room; scale the whole image (no crop). */
+.cs-sport-sign .cs-approved-icon{width:55px!important;height:55px!important;max-width:none!important}
+.cs-sport-sign{min-height:98px;gap:2px}
+.cs-distribution .sport-card .sport-ico{width:39px!important;height:39px!important}
+.cs-distribution .sport-card .sport-ico .cs-approved-icon{width:38px!important;height:38px!important;max-width:none!important}
+.activity-symbol .cs-approved-icon{width:39px!important;height:39px!important;max-width:none!important}
+.sync-symbol .cs-approved-icon{width:27px!important;height:27px!important;max-width:none!important}
+.day-icons .cs-approved-icon{width:18px!important;height:18px!important;max-width:none!important}
+@media(max-width:365px){.cs-sport-sign .cs-approved-icon{width:50px!important;height:50px!important}}

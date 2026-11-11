@@ -243,3 +243,56 @@ body{color:var(--text);background:#f8eeeb}
 }
 @media(prefers-reduced-motion:reduce){.activity-item,.icon-btn,.anatomy-canvas{transition:none!important}}
 @media(min-width:500px){.app{border:1px solid rgba(255,255,255,.9)}}
+
+/* Unified sports identity · same icon badges in distribution, recent records,
+   calendar records and wherever the shared sportIcon() is rendered. */
+.sport-card .sport-ico,
+.activity-symbol{
+  display:grid;
+  flex:none;
+  place-items:center;
+  border:1px solid rgba(255,255,255,.95)!important;
+  border-radius:16px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.94),0 5px 14px rgba(161,108,108,.09);
+}
+.sport-card .sport-ico{width:41px;height:41px}
+.activity-symbol{width:43px;height:43px}
+.sport-card .sport-ico svg,
+.activity-symbol svg{
+  width:24px;
+  height:24px;
+  display:block;
+  stroke:currentColor;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+.sport-card .sport-ico[data-sport="run"],
+.activity-symbol[data-sport="run"]{background:#ffe5cc!important;color:#a76645!important}
+.sport-card .sport-ico[data-sport="cycle"],
+.activity-symbol[data-sport="cycle"]{background:#e4eeea!important;color:#5b8d85!important}
+.sport-card .sport-ico[data-sport="strength"],
+.activity-symbol[data-sport="strength"]{background:#f9dfea!important;color:#b26c8b!important}
+.sport-card .sport-ico[data-sport="tennis"],
+.activity-symbol[data-sport="tennis"]{background:#efe3f4!important;color:#9270a5!important}
+/* Keep long training names from running into dates and metrics. */
+.activity-content{min-width:0}
+.activity-content .activity-name{
+  display:block;
+  font-size:13px;
+  line-height:1.43;
+  overflow-wrap:anywhere;
+  color:#382829;
+}
+.activity-content .activity-meta{
+  display:block;
+  font-size:11px;
+  line-height:1.5;
+  margin-top:5px;
+  color:#876d6b;
+}
+.activity-item{gap:12px}
+@media(max-width:360px){
+  .activity-symbol{width:40px;height:40px}
+  .activity-content .activity-name{font-size:12px}
+  .activity-content .activity-meta{font-size:10px}
+}

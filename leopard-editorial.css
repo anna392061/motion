@@ -1,0 +1,102 @@
+/* MOTION. · Leopard Editorial · Cream Solid v1.0
+   Final visual layer, after legacy themes. No transparent glass surfaces. */
+:root{color-scheme:light;--paper:#F9F6F1;--surface:#FFFCF8;--text:#1A1A1A;--muted:#806F63;--line:#E9DED3;--green:#A8744C;--lime:#F2E8DB;--orange:#BF7659;--blue:#B5977D;--purple:#9879B1;--shadow:0 10px 26px rgba(98,69,50,.075);--r:22px}
+html,body{background:#F1E8DF!important;color:#1A1A1A}
+body{background:#F1E8DF!important;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC",Arial,sans-serif!important}
+.app{background:#F9F6F1!important;box-shadow:0 12px 44px rgba(73,49,36,.07)!important}
+.main{padding:0 19px calc(116px + env(safe-area-inset-bottom))}
+.topbar{padding:calc(22px + env(safe-area-inset-top)) 19px 8px;gap:10px}
+.le-brand-lockup{display:flex;align-items:center;gap:9px;min-width:0}
+.le-brand-emblem{height:33px;width:33px;flex:none}
+.brand{font-family:Georgia,"Times New Roman",serif!important;letter-spacing:-.045em!important;font-size:26px!important;font-weight:400!important;color:#221C19!important;white-space:nowrap}
+.brand-dot{color:inherit!important}
+.top-actions{display:flex;gap:5px}
+.icon-btn{height:39px;width:39px;border:0!important;background:transparent!important;color:#604536!important;box-shadow:none!important;font-size:22px!important}
+.icon-btn:active,.le-sport-entry:active,.le-latest:active,.le-activity-row:active,.le-insight-sport:active{transform:scale(.978)}
+.card,.activity-item,.exercise-row,.plan-item,.cal-summary,.hero.card,.anatomy-scene,.active-workout,.gear-tile,.perf-card{
+ background:#FFFCF8!important;border:1px solid #EFE3D7!important;border-radius:22px!important;
+ box-shadow:0 8px 23px rgba(98,69,50,.065)!important;
+ backdrop-filter:none!important;-webkit-backdrop-filter:none!important;color:var(--text)!important;
+}
+.nav{max-width:440px!important;background:#F9F6F1!important;border-top:1px solid #E9DED3!important;
+ box-shadow:0 -4px 15px rgba(113,72,42,.025)!important;
+ backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
+ padding:12px 10px calc(12px + env(safe-area-inset-bottom))!important}
+.nav button{color:#A69688!important;font-size:11px!important;font-weight:500!important;gap:5px!important;transition:color .16s ease,transform .16s ease}
+.nav button.active{color:#805640!important;font-weight:700!important}
+.nav button svg{height:23px;width:23px}
+.nav button[hidden],#nav-strength{display:none!important}
+.page-title,.section-title,.cal-big,.gear-big{font-family:Georgia,"Songti SC",serif!important;color:#32251F!important;font-weight:400!important}
+.page-title{font-size:32px!important}.micro,.small-cap,.eyebrow,.le-kicker{color:#99765F!important;font-size:10px!important;letter-spacing:.16em!important;font-weight:700!important}
+.sub,.helper{color:#806F63!important}.more,.backlink{color:#A8744C!important}
+.primary,.primary.small,.sc-btn.solid,.le-primary-btn{background:#A8744C!important;color:#fff!important;border:1px solid #A8744C!important;border-radius:16px!important;box-shadow:none!important;font-weight:650!important}
+.soft-btn,.nav-arrow,.pill,.toggle button.active{background:#F4EADF!important;border:1px solid #E8D8C7!important;color:#805640!important;box-shadow:none!important}
+.pill.active,.filter-line .pill.active{background:#A8744C!important;color:#fff!important;border-color:#A8744C!important}
+.toggle{background:#EDE0D3!important;border:1px solid #E8D8C7!important}
+.overlay{background:#F9F6F1!important}
+.activity-symbol,.sport-ico{background:transparent!important;border:0!important;box-shadow:none!important}
+.activity-symbol{width:38px;height:38px}
+.sport-ico svg,.activity-symbol svg,.day-icons svg,.sync-symbol svg{display:block}
+.day-icons span{background:transparent!important;box-shadow:none!important}
+.anatomy-scene{background:#F2EAE0!important}
+.anatomy-scene .muscle.selected,.human-svg .muscle.selected{fill:#A8744C!important}
+button{touch-action:manipulation}
+button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid #A8744C!important;outline-offset:3px}
+.le-home{display:flex;flex-direction:column;gap:16px;padding-top:5px}
+.le-hero{min-height:142px;display:flex;align-items:center;justify-content:space-between;gap:10px;position:relative;overflow:hidden;padding:15px 0 14px}
+.le-hero-copy{position:relative;z-index:2;min-width:0}
+.le-greeting{font-family:Georgia,"Times New Roman",serif;font-size:17px;font-style:italic;color:#35271F}
+.le-small-heart{color:#A8744C;font-size:20px;font-style:normal}
+.le-hero h1,.le-editorial-title{font-family:Georgia,"Times New Roman",serif;font-style:italic;color:#211B17;font-size:42px;letter-spacing:-.065em;font-weight:400;line-height:1.12;margin:12px 0}
+.le-hero p{font-size:11px;color:#9C8270;letter-spacing:.065em}
+.le-hero-print{width:116px;height:126px;flex:none;background:#CDA784 url('./leopard-pattern.svg') center/142px 142px;
+ border-radius:47% 53% 40% 60% / 54% 44% 56% 46%;transform:rotate(16deg);
+ box-shadow:inset 0 0 0 7px rgba(249,246,241,.18);opacity:.97}
+.le-shortcuts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));align-items:start;gap:4px;padding:13px 0 9px}
+.le-sport-entry{border:0;background:none;color:#33271F;display:flex;flex-direction:column;align-items:center;gap:11px;padding:9px 2px 12px;min-height:80px;font-size:11px;transition:transform .15s ease}
+.le-sport-entry svg{display:block;height:37px;width:37px}.le-sport-entry span{white-space:nowrap}
+.le-home-section{min-width:0}.le-latest{position:relative;overflow:hidden;display:flex;align-items:flex-start;flex-direction:column;gap:11px;width:100%;min-height:147px;padding:20px 20px 21px;text-align:left;transition:transform .15s ease;background:#FFFCF8!important;isolation:isolate}
+.le-leopard-corner{position:absolute;right:-25px;top:-40px;width:106px;height:96px;background:#D5AF8D url('./leopard-pattern.svg') center/108px;
+ transform:rotate(22deg);border-radius:24px;z-index:-1}
+.le-latest-name{font-family:Georgia,"Times New Roman",serif;font-size:29px;line-height:1.1;font-style:italic;letter-spacing:-.045em;color:#282019;max-width:84%}
+.le-latest-meta{font-size:11px;color:#786659}.le-latest-meta b{font-weight:400;color:#B8A395;padding:0 3px}
+.le-arrow{position:absolute;right:18px;bottom:19px;width:32px;height:32px;border-radius:50%;background:#A8744C;color:#fff;display:grid;place-items:center;font-size:18px}
+.le-empty p{font-size:12px;line-height:1.55;color:#826F62}.le-small-button{border:0;background:#A8744C;color:#fff;border-radius:12px;padding:9px 12px}
+.le-week{padding:19px 18px 17px}
+.le-section-heading{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin:1px 0 14px}
+.le-section-heading h2,.le-performance-card h2{font-family:Georgia,"Times New Roman",serif;font-style:italic;font-weight:400;font-size:24px;color:#2D231D}
+.le-section-heading span,.le-week-note{font-size:11px;color:#937C69}
+.le-week-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.le-week-stats>div{display:flex;flex-direction:column;gap:4px;padding-left:12px;border-left:1px solid #E8DACD;min-width:0}
+.le-week-stats>div:first-child{padding-left:0;border-left:0}
+.le-week-stats strong{font-family:Georgia,"Times New Roman",serif;font-weight:400;font-size:25px;letter-spacing:-.055em;white-space:nowrap}
+.le-week-stats small{font-size:9px;line-height:1.4;color:#947E6E}
+.le-mini-bars{height:25px;display:flex;justify-content:flex-end;align-items:end;gap:5px;margin-top:5px;opacity:.74}
+.le-mini-bars i{width:9px;border-radius:5px 5px 2px 2px;background:#D7C4E9;height:12px}.le-mini-bars i:nth-child(2){height:18px}.le-mini-bars i:nth-child(3){height:15px}.le-mini-bars i:nth-child(4){height:22px}.le-mini-bars i:nth-child(5){height:25px}
+.le-footer-links{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;margin:1px 0 6px}
+.le-text-action{border:0;background:none;color:#805640;font-size:11px;padding:8px 2px}
+.le-text-action span{margin-left:2px}
+.le-milestone{width:100%;display:flex;flex-direction:column;gap:6px;text-align:left;padding:16px 19px;border-radius:18px!important}
+.le-milestone strong{font-family:Georgia,"Times New Roman",serif;font-style:italic;font-size:20px;font-weight:400}
+.le-milestone small{font-size:11px;color:#826E61}
+.le-secondary-page{padding-top:13px;display:flex;flex-direction:column;gap:18px}
+.le-back{background:none;border:0;color:#805640;text-align:left;padding:10px 0;font-size:13px}
+.le-sport-heading{display:flex;align-items:center;gap:14px}.le-sport-heading h1{font-family:Georgia,"Times New Roman",serif;font-style:italic;font-weight:400;font-size:36px;margin-top:5px}
+.le-summary-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.le-summary-row>div{display:flex;flex-direction:column;gap:10px;padding:17px;border-radius:18px;background:#F0E7DC}
+.le-summary-row span{font-size:10px;letter-spacing:.11em;color:#816958}
+.le-summary-row strong{font-family:Georgia,serif;font-size:25px;font-weight:400;color:#30251E}
+.le-sport-tools{display:flex;flex-wrap:wrap;gap:16px}
+.le-records{display:flex;flex-direction:column;gap:8px}
+.le-activity-row{display:flex;gap:11px;align-items:center;width:100%;padding:13px 12px;text-align:left;background:#FFFCF8;border:1px solid #EEE0D3;border-radius:16px;transition:transform .15s ease}
+.le-activity-copy{display:flex;flex-direction:column;gap:6px;flex:1;min-width:0}.le-activity-copy strong{font-size:12px;color:#30251E;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.le-activity-copy small{font-size:10px;color:#8B796C}
+.le-chevron{font-size:22px;color:#A8744C}.le-empty-panel{padding:18px;font-size:12px;color:#806F63}
+.le-editorial-title{margin:0}.le-intro{color:#8B796C;font-size:12px}
+.le-insights-summary{padding:21px 18px}.le-insights-summary .le-week-stats{margin-top:22px}
+.le-insight-sports{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.le-insight-sport{padding:16px!important;display:grid;grid-template-columns:32px 1fr auto;gap:7px;align-items:center;text-align:left}
+.le-insight-sport span{font-size:12px;color:#382A22}.le-insight-sport strong{font-size:22px;font-family:Georgia,serif;font-weight:400}.le-insight-sport small{grid-column:2/4;font-size:10px;color:#8B796C}
+.le-performance-card{padding:19px 17px}.le-performance-card h2{margin:12px 0}.le-performance-card p{font-size:11px;color:#8B796C;line-height:1.65;margin-bottom:15px}
+.le-primary-btn{padding:12px 17px;font-size:12px;min-height:42px}
+@media(max-width:365px){.le-hero h1{font-size:35px}.le-hero-print{width:94px;height:112px}.le-week-stats strong{font-size:21px}.le-latest-name{font-size:26px}.le-sport-entry{font-size:10px}.brand{font-size:23px!important}}
+@media(prefers-reduced-motion:reduce){.le-sport-entry,.le-latest,.le-activity-row,.le-insight-sport,.nav button{transition:none!important;animation:none!important}html{scroll-behavior:auto!important}}

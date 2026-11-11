@@ -1,0 +1,144 @@
+/* MOTION. · Cream Solid / Warm Editorial · 2026-11-11
+   Additive visual layer, after the existing styles. No behavioral changes. */
+:root{
+  color-scheme:light;
+  --paper:#F9F6F1;
+  --surface:#FFFCF8;
+  --text:#1A1A1A;
+  --muted:#79695D;
+  --line:#E7D8C9;
+  --green:#A8744C;
+  --lime:#F3E9DD;
+  --orange:#BF7659;
+  --blue:#B5977D;
+  --purple:#9879B1;
+  --shadow:0 7px 22px rgba(88,65,48,.055);
+  --r:22px;
+}
+html,body{background:#F4EDE5!important;color:var(--text)}
+body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','PingFang SC','Helvetica Neue',Arial,sans-serif!important}
+.app{background:#F9F6F1!important;box-shadow:0 12px 50px rgba(76,50,34,.07)!important}
+.main{padding:0 20px calc(112px + env(safe-area-inset-bottom))}
+.topbar{padding:calc(25px + env(safe-area-inset-top)) 20px 15px!important;gap:10px;align-items:center}
+.cs-brand-lockup{display:flex;gap:10px;align-items:center;min-width:0}
+.cs-heart-logo{width:43px;height:43px;object-fit:contain;flex:none;display:block}
+.cs-brand-copy{display:flex;min-width:0;flex-direction:column;gap:3px}
+.brand{font-family:Georgia,'Times New Roman',serif!important;font-size:27px!important;line-height:1.04;letter-spacing:-.045em!important;font-weight:400!important;color:#29221E!important}
+.brand-dot{color:inherit!important}
+.cs-slogan{font-family:Georgia,'Times New Roman',serif;font-size:11px;line-height:1.3;font-style:italic;letter-spacing:.015em;color:#9D7E67;white-space:nowrap}
+.top-actions{display:flex;gap:5px}
+.icon-btn{height:38px;width:38px;border:1px solid #E9DED3!important;background:#FFFCF8!important;color:#805640!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+.micro,.small-cap,.eyebrow{color:#977F6E!important;letter-spacing:.14em!important}
+.page-title,.section-title,.cal-big,.gear-big{color:#342A24!important}
+.page-title{font-family:Georgia,'PingFang SC',serif!important;font-weight:450!important;letter-spacing:-.035em!important}
+.sub,.helper,.muted,.activity-meta,.sport-card .label{color:#816D5E!important}
+.card,.activity-item,.exercise-row,.plan-item,.cal-summary,.gear-tile,.perf-card,
+.overlay .card,.hero.card,.sport-card{
+  position:relative;
+  color:#312720!important;
+  background:#FFFCF8!important;
+  border:1px solid #E9DED3!important;
+  border-radius:21px!important;
+  box-shadow:0 7px 20px rgba(88,65,48,.05)!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
+}
+.card::before,.activity-item::before,.hero::after{display:none!important}
+.activity-item,.exercise-row,.plan-item{border-radius:17px!important}
+.activity-name,.activity-item strong{color:#3C2E26!important}
+.hero .big,.hero .big small,.hero-bottom .value,.hero-bottom .value small{color:#35271F!important}
+.primary,.primary.small,.sc-btn.solid,.le-primary-btn{
+  background:#A8744C!important;border-color:#A8744C!important;color:#fff!important;
+  border-radius:14px!important;box-shadow:none!important;
+}
+.soft-btn,.nav-arrow,.pill{background:#F4EADF!important;color:#805640!important;border:1px solid #E8DACD!important;box-shadow:none!important;backdrop-filter:none!important}
+.pill.active,.filter-line .pill.active,.v14-sync .pill.active{
+  background:#A8744C!important;border-color:#A8744C!important;color:#fff!important;
+}
+.toggle,.perf-tabs,.sc-topnav,.sc-bottom{background:#F1E8DF!important;border-color:#E9DCCE!important;backdrop-filter:none!important}
+.nav{background:#F9F6F1!important;border-top:1px solid #E8DDCF!important;box-shadow:0 -4px 16px rgba(83,56,40,.03)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+.nav button{color:#9F8E80!important}
+.nav button.active{color:#805640!important}
+.nav button.active svg{color:#805640!important}
+.overlay{background:#F9F6F1!important}
+.day.today{border-color:#D6B9A3!important}
+.day.selected{background:#F0E2D6!important;border-color:#C8A88F!important}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid #A8744C!important;outline-offset:3px}
+
+/* Approved images: no filters, recoloring, clipping, redraws or decorative tiles. */
+.cs-approved-icon{display:block;object-fit:contain;max-width:100%;flex:none;filter:none!important;opacity:1!important;mix-blend-mode:normal!important}
+.sport-ico,.activity-symbol,.sync-symbol,.day-icons span{
+  border:0!important;background:transparent!important;box-shadow:none!important;
+  backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
+}
+.sport-card:nth-child(n) .sport-ico{border:0!important;background:transparent!important;box-shadow:none!important;color:inherit!important}
+.sport-ico .cs-approved-icon,.activity-symbol .cs-approved-icon,.sync-symbol .cs-approved-icon,.day-icons .cs-approved-icon{max-width:100%;max-height:100%}
+.sport-ico{width:34px!important;height:34px!important;display:grid;place-items:center}
+.activity-symbol{width:40px!important;height:40px!important;display:grid;place-items:center}
+.sync-symbol{display:grid;place-items:center}
+.day-icons span{padding:0!important}
+
+/* Home: icons, existing quick entries, weekly overview and recent activities. */
+.cs-home{display:flex;flex-direction:column;padding-top:4px;gap:0}
+.cs-sports{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;align-items:center;padding:10px 0 16px}
+.cs-sport-sign{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-width:0;min-height:83px;color:#594638}
+.cs-sport-sign .cs-approved-icon{width:44px;height:44px}
+.cs-sport-sign span{font-size:11px;letter-spacing:.005em}
+.cs-quick{margin:0 0 27px}
+.cs-home .overview-quick{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:0}
+.cs-home .overview-quick button{background:#E7D8C9!important;border:1px solid #DAC3AE!important;border-radius:17px!important;padding:16px 14px!important;min-height:78px;color:#503B2C!important;box-shadow:none!important;font-weight:660!important;font-size:13px!important;text-align:left}
+.cs-home .overview-quick button small{color:#816D5F!important;font-size:10px!important;font-weight:400!important;margin-top:7px}
+.cs-home .overview-quick button:active{transform:scale(.985)}
+.cs-heading{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.cs-eyebrow{font-size:9px;letter-spacing:.19em;color:#A17D63;font-weight:750}
+.cs-heading h1{font-family:Georgia,'PingFang SC',serif;font-size:25px;line-height:1.25;font-weight:400;letter-spacing:-.025em;color:#2C211B}
+.cs-week-surface{padding:19px 18px 19px!important;border-radius:22px!important}
+.cs-week-surface>.section-row{display:flex;align-items:center;justify-content:space-between;gap:9px;flex-wrap:wrap;margin:0 0 8px!important}
+.cs-week-surface>.section-row .small-cap{font-size:10px!important;letter-spacing:.075em!important;color:#8A7667!important}
+.cs-week-surface .week-picker{display:flex;gap:7px}
+.cs-week-surface .nav-arrow{height:28px;width:28px;min-width:28px;border-radius:50%!important;padding:0!important}
+.cs-week-surface .hero.card{border:0!important;box-shadow:none!important;padding:13px 1px 20px!important;min-height:0!important;background:none!important;overflow:visible!important}
+.cs-week-surface .hero .micro{color:#927A68!important;letter-spacing:.12em!important;font-size:10px!important}
+.cs-week-surface .hero .big{margin:12px 0 2px!important;font-family:Georgia,'Times New Roman',serif;font-size:47px!important;line-height:1.08;letter-spacing:-.055em!important;font-weight:400!important;color:#32251F!important}
+.cs-week-surface .hero .big small{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC',sans-serif;font-size:15px!important;font-weight:400!important;color:#87715F!important}
+.cs-week-surface .hero-bottom{display:flex;gap:30px;margin-top:20px!important}
+.cs-week-surface .hero-bottom .stat{min-width:0}
+.cs-week-surface .hero-bottom .stat .micro{color:#988474!important;font-size:9px!important}
+.cs-week-surface .hero-bottom .value{font-family:Georgia,'Times New Roman',serif;font-weight:400!important;font-size:21px!important;margin-top:6px!important}
+.cs-distribution{border-top:1px solid #E9DED3;padding-top:20px}
+.cs-distribution-header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px}
+.cs-distribution-header h2{font-family:Georgia,'PingFang SC',serif;font-size:17px;font-weight:400;color:#382A20}
+.cs-distribution-header span{font-size:9px;letter-spacing:.12em;color:#A58E7D}
+.cs-distribution .trend-row{display:flex;gap:3px;height:7px;margin:0 0 15px;background:#EEE7DF!important;border-radius:99px;overflow:hidden}
+.cs-distribution .trend-row span{height:100%;min-width:0}
+.cs-distribution .sport-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.cs-distribution .sport-card:nth-child(n){min-height:108px!important;padding:12px 12px 10px!important;border-radius:15px!important;background:#F6F0E9!important;border:1px solid #EEE4D9!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+.cs-distribution .sport-card .spread{align-items:center;gap:4px}
+.cs-distribution .sport-card .spread>span:first-child{font-size:11px!important;font-weight:600!important;color:#584638}
+.cs-distribution .sport-card .figure{font-family:Georgia,'Times New Roman',serif;margin-top:5px!important;font-size:23px!important;letter-spacing:-.035em;font-weight:400!important;color:#34271E!important}
+.cs-distribution .sport-card .figure small{font-family:-apple-system,BlinkMacSystemFont,sans-serif;color:#9E8877;font-weight:400!important}
+.cs-distribution .sport-card .label{font-size:9px!important;line-height:1.4;color:#907D6D!important;margin-top:4px!important}
+.cs-week-section{margin-bottom:27px}
+.cs-recent{margin:0 0 14px}
+.cs-recent .section-row{margin-bottom:15px}
+.cs-recent .section-title{font-family:Georgia,'PingFang SC',serif!important;font-size:23px!important;font-weight:400!important;color:#32251F!important}
+.cs-recent .more{color:#A8744C!important;font-size:11px}
+.cs-recent .activity-list{display:grid;gap:10px}
+.cs-recent .activity-item{background:#FFFCF8!important;border-color:#E9DED3!important;box-shadow:none!important}
+.cs-recent .activity-name{font-weight:600!important}
+.cs-notice{padding-bottom:14px}
+.cs-notice .notice{background:#F1EAE1!important;border:1px solid #E9DED3!important;color:#927C6C!important;border-radius:15px!important;font-size:11px!important;line-height:1.6}
+
+@media(max-width:365px){
+  .brand{font-size:24px!important}
+  .cs-heart-logo{width:37px;height:37px}
+  .cs-slogan{font-size:10px}
+  .main{padding-left:16px;padding-right:16px}
+  .topbar{padding-left:16px!important;padding-right:16px!important}
+  .cs-sport-sign .cs-approved-icon{width:39px;height:39px}
+  .cs-sport-sign{gap:6px}
+  .cs-sport-sign span{font-size:10px}
+  .cs-week-surface{padding-left:14px!important;padding-right:14px!important}
+  .cs-week-surface .hero .big{font-size:40px!important}
+}
+@media(prefers-reduced-motion:reduce){.cs-home button{transition:none!important;animation:none!important}}

@@ -296,3 +296,28 @@ body{color:var(--text);background:#f8eeeb}
   .activity-content .activity-name{font-size:12px}
   .activity-content .activity-meta{font-size:10px}
 }
+
+/* Sport symbols: native iOS emoji, centered inside existing pastel glass badges.
+   Keep the user's approved Peach Glow Glass badge colors and dimensions. */
+.sport-emoji{
+  display:inline-flex;
+  flex:none;
+  align-items:center;
+  justify-content:center;
+  width:1em;
+  height:1em;
+  line-height:1;
+  font-weight:400;
+  white-space:nowrap;
+  font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif;
+  vertical-align:middle;
+  font-variant-emoji:emoji;
+}
+.sport-card .sport-ico,.activity-symbol,.sync-symbol,.day-icons span{
+  align-items:center;
+  justify-content:center;
+}
+.sport-card .sport-ico .sport-emoji{font-size:25px!important}
+.activity-symbol .sport-emoji{font-size:23px!important}
+.sync-symbol .sport-emoji{font-size:19px!important}
+.day-icons .sport-emoji{font-size:12px!important}

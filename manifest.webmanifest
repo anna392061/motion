@@ -1,12 +1,12 @@
 {
   "name": "MOTION. — Personal Movement",
   "short_name": "MOTION.",
-  "description": "MOTION. · Leopard Editorial movement archive",
+  "description": "MOTION. • Personal running, cycling, strength and tennis archive",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#F9F6F1",
-  "theme_color": "#F9F6F1",
+  "background_color": "#fff9f6",
+  "theme_color": "#fff6f1",
   "icons": [
     {
       "src": "./icon.svg",

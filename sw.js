@@ -1,6 +1,6 @@
 /* MOTION. v1.4.7 — network-first, never caches private activity data. */
-const CACHE='motion-shell-v1-4-7-peachglass-emoji-20261111';
-const FILES=['./','./index.html','./styles.css','./theme.css','./v14.css?v=1440','./v141.css','./pace-format.js?v=1440','./v14.js?v=1440','./v141.js?v=1440','./runtime.js?v=1450','./app.js?v=1443','./strength-core.js?v=1470','./strength-core.css?v=1470','./performance.css?v=1460','./performance.js?v=1470','./peach-glow.css?v=20261111','./peach-glow-glass.css?v=20261111-emoji','./manifest.webmanifest','./icon.svg','./apple-touch-icon.png'];
+const CACHE='motion-shell-v1-4-7-cream-solid-20261111-1';
+const FILES=['./','./index.html','./styles.css','./theme.css','./v14.css?v=1440','./v141.css','./pace-format.js?v=1440','./v14.js?v=1440','./v141.js?v=1440','./runtime.js?v=1450','./app.js?v=1443','./strength-core.js?v=1470','./strength-core.css?v=1470','./performance.css?v=1460','./performance.js?v=1470','./peach-glow.css?v=20261111','./peach-glow-glass.css?v=20261111-emoji','./cream-solid.css?v=20261111-1','./cream-solid.js?v=20261111-1','./assets/brand/leopard-heart.png','./assets/brand/app-icon-512.png','./assets/icons/running.png','./assets/icons/cycling.png','./assets/icons/strength.png','./assets/icons/tennis.png','./manifest.webmanifest','./icon.svg','./apple-touch-icon.png'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(FILES)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('motion-shell-')&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',event=>{

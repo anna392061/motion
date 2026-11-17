@@ -1,9 +1,11 @@
-/* MOTION. Strength Core 1.4.7 — real local data, editable templates, activity-linked history.
+/* MOTION. Strength Core 1.4.8 — real local data, editable templates, activity-linked history.
    This replaces ONLY Strength's screen. It does not change sync, calendars, activities or gear. */
 (function(){
 'use strict';
 const STORAGE='motion_strength_templates_v1';
 const ACTIVE='motion_strength_active_v1';
+const CUSTOM_STORAGE='motion_strength_custom_exercises_v1';
+const MAX_CUSTOM=100;
 const X=val=>String(val??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const clone=x=>JSON.parse(JSON.stringify(x));
 const num=(n,min=0,max=999)=>Math.min(max,Math.max(min,Number(n)||0));
@@ -13,6 +15,8 @@ const createSet=(w=0,r=10)=>({weight:String(w),reps:String(r),done:false});
 const safeId=id=>String(id||'').replace(/[^a-z0-9_-]/gi,'');
 const itemsFromPlan=()=>Array.isArray(state.plan)?state.plan.filter(p=>getEx(p.id)).map(p=>({id:p.id,sets:Array.from({length:Math.max(1,Math.min(15,Number(p.sets)||3))},()=>createSet(p.weight??0,p.reps??10))})):[];
 const extra=[
+{id:'row_close',parentId:'row',variant:'close',name:'窄握坐姿划船',en:'Close-Grip Seated Cable Row',pattern:'Pull · 水平 · 窄握',primary:['lats','traps'],secondary:['biceps','rearDelts'],stabilizer:['erectors'],desc:'使用较窄握柄完成坐姿绳索划船，独立记录重量和训练进展。',setup:['坐稳并保持躯干稳定，使用舒适的窄握柄。'],execution:['手肘沿身体两侧向后移动，肩胛骨自然活动。'],mistakes:['为了拉得更远而大幅后仰，或用肩部耸起代偿。'],cue:'将肘部向身后带，不要用腰部甩动。'},
+{id:'row_wide',parentId:'row',variant:'wide',name:'宽握坐姿划船',en:'Wide-Grip Seated Cable Row',pattern:'Pull · 水平 · 宽握',primary:['traps','lats'],secondary:['rearDelts','biceps'],stabilizer:['erectors'],desc:'使用较宽握柄完成坐姿绳索划船。肘部路径可随握柄调整，与窄握版本分别追踪。',setup:['使用舒适的宽握柄，坐稳，胸廓和骨盆保持自然对齐。'],execution:['肘部自然向两侧后方移动，控制肩胛骨活动与还原。'],mistakes:['强行把肘抬得过高，或通过躯干摆动借力。'],cue:'手只是连接握柄，想象上背部带动手肘后移。'},
 {id:'smithsquat',name:'史密斯深蹲',en:'Smith Machine Squat',pattern:'Squat · 史密斯',primary:['quads','gluteMax'],secondary:['hamstrings'],stabilizer:['abs'],desc:'固定杠铃轨迹的深蹲变式。'},
 {id:'gobletsquat',name:'高脚杯深蹲',en:'Goblet Squat',pattern:'Squat · 前置负重',primary:['quads','gluteMax'],secondary:['abs'],stabilizer:[],desc:'持哑铃或壶铃于胸前的深蹲。'},
 {id:'hacksquat',name:'哈克深蹲',en:'Hack Squat',pattern:'Squat · 器械',primary:['quads','gluteMax'],secondary:[],stabilizer:[],desc:'器械支撑下完成的深蹲。'},
@@ -24,13 +28,45 @@ const extra=[
 {id:'deadbug',name:'死虫式',en:'Dead Bug',pattern:'Core · 抗伸展',primary:['abs'],secondary:[],stabilizer:[],desc:'仰卧对侧手脚配合的躯干控制。'},
 {id:'pallof',name:'Pallof Press',en:'Pallof Press',pattern:'Core · 抗旋转',primary:['abs'],secondary:[],stabilizer:[],desc:'站姿抗旋转练习。'}
 ];
-extra.forEach(e=>{if(!exerciseList.some(a=>a.id===e.id))exerciseList.push({...e,setup:[],execution:[],mistakes:[],cue:''})});
+extra.forEach(e=>{if(!exerciseList.some(a=>a.id===e.id))exerciseList.push({...e,setup:e.setup||[],execution:e.execution||[],mistakes:e.mistakes||[],cue:e.cue||''})});
+// User-created exercises have stable IDs so templates, history and personal notes stay linked.
+// Validate imported records as well as new records; never allow an import to overwrite built-ins.
+function normalizeCustom(raw){
+ if(!raw||typeof raw!=='object')return null;
+ const id=safeId(raw.id);
+ const name=String(raw.name||'').trim().slice(0,60);
+ if(!/^custom_[a-z0-9_-]{5,50}$/i.test(id)||!name)return null;
+ const primary=Array.isArray(raw.primary)?raw.primary.filter(m=>Object.prototype.hasOwnProperty.call(muscles,m)).slice(0,1):[];
+ const main=primary[0]||'lats';
+ return {id,custom:true,name,en:String(raw.en||'').trim().slice(0,80),pattern:'Custom · '+(muscles[main]?.name||'训练'),primary:[main],secondary:[],stabilizer:[],desc:String(raw.desc||'').trim().slice(0,240),setup:[],execution:[],mistakes:[],cue:''};
+}
+function restoreCustomExercises(raw){
+ if(!Array.isArray(raw))return;
+ for(const entry of raw.slice(0,MAX_CUSTOM)){
+  const ex=normalizeCustom(entry);if(!ex)continue;
+  const old=getEx(ex.id);
+  if(old){if(old.custom)Object.assign(old,ex);}
+  else if(exerciseList.filter(e=>e.custom).length<MAX_CUSTOM)exerciseList.push(ex);
+ }
+ saveCustomExercises();
+ refresh();
+}
+function saveCustomExercises(){
+ try{localStorage.setItem(CUSTOM_STORAGE,JSON.stringify(exerciseList.filter(e=>e.custom)))}catch{toast('自定义动作未能保存，请检查设备存储空间')}
+}
+function getCustomExercises(){return clone(exerciseList.filter(e=>e.custom))}
+const savedCustom=parseJSON(CUSTOM_STORAGE,[]);
+if(Array.isArray(savedCustom))for(const entry of savedCustom.slice(0,MAX_CUSTOM)){
+ const ex=normalizeCustom(entry);
+ if(ex&&!getEx(ex.id))exerciseList.push(ex);
+}
+
 function sanitizeTemplates(raw){return raw.filter(t=>t&&Array.isArray(t.items)).slice(0,40).map(t=>({id:safeId(t.id)||gen(),name:String(t.name||'我的训练').slice(0,80),desc:String(t.desc||'').slice(0,160),items:t.items.filter(i=>i&&getEx(i.id)).slice(0,35).map(i=>({id:i.id,sets:(Array.isArray(i.sets)&&i.sets.length?i.sets:[createSet()]).slice(0,25).map(s=>({weight:String(num(s.weight,0,999)),reps:String(num(s.reps,0,200)),done:false}))}))}));}
 let templates=sanitizeTemplates(parseJSON(STORAGE,[]));
 if(!templates.length){templates=[{id:'legacy-lower-a',name:'Lower Body A',desc:'从原有 My Plan 安全迁移',items:itemsFromPlan()}];saveTemplates();}
 let active=parseJSON(ACTIVE,null);
 if(active && (!Array.isArray(active.items)||!active.startAt))active=null;
-let draft=null,editId=null,editNew=false;
+let draft=null,editId=null,editNew=false,editingCustomId=null;
 let mode='home',search='',filter='全部',pickContext=null,detailId=null,returnMode='library',busy=false;
 function saveTemplates(){try{localStorage.setItem(STORAGE,JSON.stringify(templates))}catch{toast('模板保存失败，请检查设备存储空间')}}
 function keepActive(){try{if(active)localStorage.setItem(ACTIVE,JSON.stringify(active));else localStorage.removeItem(ACTIVE)}catch{toast('临时训练未能保存在设备上')}}
@@ -51,6 +87,7 @@ function screen(){
  if(mode==='edit')s+=edit();
  if(mode==='workout')s+=workout();
  if(mode==='library')s+=library();
+ if(mode==='create')s+=customForm();
  if(mode==='detail')s+=detail();
  if(mode==='history')s+=history();
  return `<div class="strength-core">${s}</div>`;
@@ -78,7 +115,7 @@ function workout(){if(!active){mode='home';return home()}return `<button class="
 function category(e){const m=[...(e.primary||[]),...(e.secondary||[])];if(m.some(id=>['gluteMax','gluteMed','hamstrings','quads','calves'].includes(id)))return '臀腿';if(m.some(id=>['lats','traps','rearDelts','erectors'].includes(id)))return '背肩';if(m.some(id=>['pecs','triceps','biceps','delts'].includes(id)))return '胸臂';return '核心'}
 function filtered(){return exerciseList.filter(e=>(filter==='全部'||category(e)===filter)&&`${e.name} ${e.en} ${e.pattern}`.toLowerCase().includes(search.toLowerCase())).sort((a,b)=>Number(state.favorites.includes(b.id))-Number(state.favorites.includes(a.id))||a.name.localeCompare(b.name,'zh-CN'))}
 function exrows(){return filtered().map(e=>`<div class="sc-listrow"><button class="sc-flex" onclick="MOTIONStrength.openDetail('${e.id}','library')"><b>${X(e.name)}</b><small>${X(e.en)} · ${X(e.pattern)}</small></button>${pickContext?btn(pickContext.index!=null?'替换':'添加',`MOTIONStrength.choose('${e.id}')`,'solid small'):btn('查看 →',`MOTIONStrength.openDetail('${e.id}','library')`,'quiet')}</div>`).join('')||'<p class="sc-empty">没有符合条件的动作。</p>'}
-function library(){return `${pickContext?'<button class="sc-back" onclick="MOTIONStrength.backFromLibrary()">← 返回上一页</button>':''}<div class="sc-headrow"><h2>${pickContext?'选择动作':'动作库'}</h2></div>
+function library(){return `${pickContext?'<button class="sc-back" onclick="MOTIONStrength.backFromLibrary()">← 返回上一页</button>':''}<div class="sc-headrow"><h2>${pickContext?'选择动作':'动作库'}</h2>${btn('＋ 自定义动作','MOTIONStrength.newCustom()','quiet')}</div>
  <input id="sc-search" class="sc-input" placeholder="搜索动作名称、中英文或模式" value="${X(search)}" oninput="MOTIONStrength.search(this.value)">
  <div class="sc-filters">${['全部','臀腿','背肩','胸臂','核心'].map(c=>`<button class="${filter===c?'sel':''}" onclick="MOTIONStrength.filter('${c}')">${c}</button>`).join('')}</div>
  <div id="sc-exlist">${exrows()}</div>`}
@@ -118,7 +155,48 @@ function detail(){
  ${cues.length?`<section class="sc-exercise"><h2 class="sc-section-title">动作要点</h2><ul class="sc-cues">${cues.map(c=>`<li>${X(c)}</li>`).join('')}</ul></section>`:''}
  <section class="sc-exercise"><div class="sc-kicker">LAST PERFORMANCE</div><div class="sc-performance">${l?X(l.sets.map(s=>`${s.weight} kg × ${s.reps}`).join(' · ')):'暂无历史记录'}</div>${l?`<p class="sc-performance-date">${X(l.date)}</p>`:''}</section>
  <section class="sc-exercise"><h2 class="sc-section-title">历史表现</h2>${historyList.map(a=>{const entry=a.log.find(it=>it.id===e.id);return `<div class="sc-historyline"><span>${X(a.date)}</span><b>${X(entry.sets.map(s=>`${s.weight}×${s.reps}`).join(' · '))}</b></div>`}).join('')||'<p class="sc-sub">暂无历史数据。</p>'}</section>
- ${pickContext?btn('添加到当前安排',`MOTIONStrength.choose('${e.id}')`,'solid sc-full'):btn('添加到模板',`MOTIONStrength.quickAdd('${e.id}')`,'outline sc-full')}`;
+ ${pickContext?btn('添加到当前安排',`MOTIONStrength.choose('${e.id}')`,'solid sc-full'):btn('添加到模板',`MOTIONStrength.quickAdd('${e.id}')`,'outline sc-full')}
+ ${e.custom?btn('编辑自定义动作',"MOTIONStrength.editCustom('"+e.id+"')",'quiet sc-full'):''}`;
+}
+
+function customForm(){
+ const e=editingCustomId?getEx(editingCustomId):null;
+ const primary=e?.primary?.[0]||'lats';
+ return `<button class="sc-back" type="button" onclick="MOTIONStrength.cancelCustom()">← 返回</button>${top('CUSTOM EXERCISE',e?'编辑自定义动作':'创建自定义动作','自定义动作会独立保留重量和次数历史。')}
+ <form class="sc-custom-form" onsubmit="event.preventDefault();MOTIONStrength.saveCustom()">
+ <label class="sc-label">动作名称 <span class="sc-required">*</span><input id="sc-custom-name" class="sc-input" required maxlength="60" value="${X(e?.name||'')}" placeholder="例如：胸托哑铃划船"></label>
+ <label class="sc-label">英文名称（选填）<input id="sc-custom-en" class="sc-input" maxlength="80" value="${X(e?.en||'')}" placeholder="Exercise name"></label>
+ <label class="sc-label">主要训练肌群<select id="sc-custom-muscle" class="sc-input">${Object.keys(muscles).map(id=>`<option value="${id}" ${id===primary?'selected':''}>${X(muscles[id].name)}</option>`).join('')}</select></label>
+ <label class="sc-label">动作说明（选填）<textarea id="sc-custom-desc" class="sc-input" rows="3" maxlength="240" placeholder="器械、握法或个人动作提示…">${X(e?.desc||'')}</textarea></label>
+ <p class="sc-sub">每个自定义动作都有独立的训练记录。编辑名称不会删除已有历史。</p>
+ <div class="sc-actions"><button type="button" class="sc-btn outline" onclick="MOTIONStrength.cancelCustom()">取消</button><button type="submit" class="sc-btn solid">保存动作</button></div>
+ </form>`;
+}
+function newCustom(){editingCustomId=null;mode='create';refresh()}
+function editCustom(id){if(!getEx(id)?.custom)return;editingCustomId=id;detailId=id;mode='create';refresh()}
+function cancelCustom(){mode=editingCustomId?'detail':'library';editingCustomId=null;refresh()}
+function saveCustom(){
+ const name=String(document.getElementById('sc-custom-name')?.value||'').trim();
+ const en=String(document.getElementById('sc-custom-en')?.value||'').trim();
+ const primary=document.getElementById('sc-custom-muscle')?.value||'lats';
+ const desc=String(document.getElementById('sc-custom-desc')?.value||'').trim();
+ if(!name){toast('请填写动作名称');return}
+ if(name.length>60||en.length>80||desc.length>240){toast('动作说明过长');return}
+ if(exerciseList.some(e=>e.id!==editingCustomId&&e.name.toLowerCase()===name.toLowerCase())){toast('动作名称已存在，请换一个名称');return}
+ if(!Object.prototype.hasOwnProperty.call(muscles,primary)){toast('请选择有效的肌群');return}
+ if(!editingCustomId&&exerciseList.filter(e=>e.custom).length>=MAX_CUSTOM){toast('最多可创建 100 个自定义动作');return}
+ const id=editingCustomId||('custom_'+gen());
+ const next=normalizeCustom({id,name,en,primary:[primary],desc});
+ if(!next)return;
+ const old=getEx(id);
+ if(old?.custom)Object.assign(old,next);
+ else if(!old)exerciseList.push(next);
+ else {toast('动作 ID 冲突');return}
+ saveCustomExercises();
+ const isNew=!editingCustomId;
+ editingCustomId=null;
+ if(isNew&&pickContext){choose(id);return}
+ detailId=id;returnMode='library';mode='detail';refresh();toast(isNew?'自定义动作已创建':'动作已更新');
 }
 function history(){const a=activities().filter(x=>x.type==='strength').sort((a,b)=>String(b.date).localeCompare(String(a.date)));return `<div class="sc-headrow"><h2>训练历史</h2></div>
  ${a.map(s=>`<button class="sc-historyitem" onclick="openActivity('${X(s.id)}')"><span><b>${X(s.title||'力量训练')}</b><small>${X(s.date)} · ${Math.round(Number(s.minutes)||0)} min · ${s.sets??'—'} 组</small></span><span>›</span></button>`).join('')||'<div class="sc-empty">还没有力量训练记录。</div>'}`}
@@ -144,7 +222,7 @@ async function finish(){if(!active||busy)return;const done=active.items.map(it=>
  const secs=Math.max(1,Math.round((Date.now()-from.startAt)/60000));const a={id:'m'+Date.now()+'sc',date:dateKey(new Date(from.startAt)),start:new Date(from.startAt).toISOString(),type:'strength',title:from.name+' · 力量训练',minutes:secs,sets:done.reduce((n,it)=>n+it.sets.length,0),exNames:done.map(it=>asName(it.id)),log:done,source:'手动记录'};
  try{state.manual.push(a);await storeActivity(a);active=null;keepActive();mode='history';refresh();toast('已保存运动，可在历史中关联 Apple Watch')}catch(e){state.manual=state.manual.filter(x=>x.id!==a.id);toast('保存失败，请保留页面重试');console.error(e)}finally{busy=false}}
 function pick(context,index=null){pickContext={context,index};mode='library';search='';filter='全部';refresh()}
-function choose(id){const e=getEx(id);if(!e||!pickContext)return;const {context,index}=pickContext;const target=context==='edit'?draft:active;if(!target)return;const prior=last(id)?.sets||[];const item={id,sets:prior.length?prior.map(s=>createSet(s.weight,s.reps)):Array.from({length:3},()=>createSet())};if(index===null||index===undefined)target.items.push(item);else target.items.splice(index,1,item);if(context==='workout')keepActive();pickContext=null;mode=context==='edit'?'edit':'workout';refresh();toast('动作已添加')}
+function choose(id){const e=getEx(id);if(!e||!pickContext)return;const {context,index}=pickContext;const target=context==='edit'?draft:active;if(!target)return;const prior=last(id)?.sets||((index!=null)?target.items[index]?.sets:[])||[];const item={id,sets:prior.length?prior.map(s=>createSet(s.weight,s.reps)):Array.from({length:3},()=>createSet())};if(index===null||index===undefined)target.items.push(item);else target.items.splice(index,1,item);if(context==='workout')keepActive();pickContext=null;mode=context==='edit'?'edit':'workout';refresh();toast('动作已添加')}
 function backFromLibrary(){const ctx=pickContext?.context;pickContext=null;mode=ctx==='edit'?'edit':ctx==='workout'?'workout':'home';refresh()}
 function openDetail(id,origin='library'){detailId=id;returnMode=origin;mode='detail';refresh()}
 function backFromDetail(){mode=returnMode;refresh()}
@@ -160,7 +238,7 @@ function restoreLegacyPlan(plan){
  else templates.unshift({id:'legacy-lower-a',name:'Lower Body A',desc:'从旧版训练计划恢复',items});
  saveTemplates();refresh();
 }
-window.MOTIONStrength={screen,go,openTemplateEditor,editTemplate:openTemplateEditor,restoreLegacyPlan,newTemplate,saveEdit,cancelEdit,deleteTemplate,editName:v=>{if(draft)draft.name=v},editDescription:v=>{if(draft)draft.desc=v},move,removeItem,addSet,delSet,mark,setField,selectNumber,start,resume,discard,finish,pick,choose,backFromLibrary,openDetail,backFromDetail,quickAdd,search:searchFor,filter:setFilter,note:(id,value)=>{state.notes[id]=value;persist()},getTemplates:()=>clone(templates),restoreTemplates};
+window.MOTIONStrength={screen,go,openTemplateEditor,editTemplate:openTemplateEditor,restoreLegacyPlan,newTemplate,saveEdit,cancelEdit,deleteTemplate,editName:v=>{if(draft)draft.name=v},editDescription:v=>{if(draft)draft.desc=v},move,removeItem,addSet,delSet,mark,setField,selectNumber,start,resume,discard,finish,pick,choose,backFromLibrary,openDetail,backFromDetail,quickAdd,newCustom,editCustom,cancelCustom,saveCustom,getCustomExercises,restoreCustomExercises,search:searchFor,filter:setFilter,note:(id,value)=>{state.notes[id]=value;persist()},getTemplates:()=>clone(templates),restoreTemplates};
 // Override only the Strength page. All original activity, syncing, calendar and gear functions remain intact.
 strength=function(){return window.MOTIONStrength.screen()};
 // Integrate the remember-token control into the existing settings screen. Preserve
@@ -175,6 +253,6 @@ settingsOverlay=function(){
  return base.replace(label,'同步访问口令')
    .replace(intro,tokenSettings+intro)
    .replace('访问口令关闭浏览器标签页后需重新输入。','保存后更新网页无需重复输入；如果已清除网站数据，需重新填写一次。')
-   +`<section class="card p18 section"><div class="micro">APP VERSION</div><h2 class="section-title">MOTION. V1.4.7</h2><p class="helper">Strength quick input · Performance comparison · Remember Sync Token</p></section>`;
+   +`<section class="card p18 section"><div class="micro">APP VERSION</div><h2 class="section-title">MOTION. V1.4.8</h2><p class="helper">Strength exercise variations · Custom exercises · Remember Sync Token</p></section>`;
 };
 })();

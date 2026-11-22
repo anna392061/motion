@@ -324,10 +324,10 @@ body{color:var(--text);background:#f8eeeb}
 
 /* 2026-11-23: preserve the four uploaded PNG illustrations as transparent artwork;
    remove badge tiles, borders and shadows without affecting the containing cards. */
-.sport-card .sport-ico,
-.activity-symbol,
-.sync-symbol,
-.day-icons > span {
+.app .sport-card .sport-ico[data-sport],
+.app .activity-symbol[data-sport],
+.app .sync-symbol,
+.app .day-icons > span {
   background:transparent!important;
   border:0!important;
   box-shadow:none!important;

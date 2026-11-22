@@ -321,3 +321,26 @@ body{color:var(--text);background:#f8eeeb}
 .activity-symbol .sport-emoji{font-size:23px!important}
 .sync-symbol .sport-emoji{font-size:19px!important}
 .day-icons .sport-emoji{font-size:12px!important}
+
+/* 2026-11-23: preserve the four uploaded PNG illustrations as transparent artwork;
+   remove badge tiles, borders and shadows without affecting the containing cards. */
+.sport-card .sport-ico,
+.activity-symbol,
+.sync-symbol,
+.day-icons > span {
+  background:transparent!important;
+  border:0!important;
+  box-shadow:none!important;
+}
+.sport-image {
+  display:block;
+  flex:none;
+  object-fit:contain;
+  vertical-align:middle;
+  max-width:none;
+  max-height:none;
+}
+.sport-card .sport-ico .sport-image {width:30px;height:30px}
+.activity-symbol .sport-image {width:30px;height:30px}
+.sync-symbol .sport-image {width:24px;height:24px}
+.day-icons .sport-image {width:14px;height:14px}

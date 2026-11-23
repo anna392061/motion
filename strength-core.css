@@ -49,3 +49,66 @@ body:has(#nav-strength.active) .topbar .micro{display:none}
  .strength-core .sc-exhead-actions{width:100%;justify-content:space-between}
  .strength-core .sc-action-check{min-height:32px}
 }
+
+
+/* Approved left-check UI: matches the interactive HTML prototype v2.
+   Scope to active workouts only; template editing and history are unchanged. */
+.strength-core .sc-workout-exhead{
+  display:flex;align-items:center;justify-content:space-between;gap:9px;min-width:0;
+}
+.strength-core .sc-workout-exhead .sc-exhead-title{
+  flex:1;min-width:0;overflow-wrap:anywhere;
+}
+.strength-core .sc-workout-exhead .sc-history-button.sc-btn.quiet{
+  flex:none;white-space:nowrap;padding:6px 0;font-size:11px;
+}
+.strength-core .sc-workout-exhead .sc-action-check{
+  display:grid;place-items:center;flex:none;
+  width:28px;height:28px;min-width:28px;min-height:28px;padding:0;
+  border:1.5px solid #c79e8a;border-radius:7px;
+  background:rgba(255,250,246,.85);color:#a37966;
+  box-shadow:none;
+}
+.strength-core .sc-workout-exhead .sc-action-check-symbol{
+  display:grid;place-items:center;width:100%;height:100%;
+  border:0;border-radius:0;font-size:16px;line-height:1;font-weight:800;
+}
+.strength-core .sc-workout-exhead .sc-action-check.all{
+  background:#bf8574;border-color:#bf8574;color:#fff;
+}
+.strength-core .sc-workout-exhead .sc-action-check.all .sc-action-check-symbol{
+  background:transparent;color:inherit;border:0;
+}
+.strength-core .sc-workout-exhead .sc-action-check.partial{
+  background:#f6e6d8;border-color:#caa389;color:#a37556;
+}
+.strength-core .sc-exhead-last{
+  padding-left:37px;margin-top:1px;margin-bottom:8px;
+  color:#a68c86;font-size:11.5px;line-height:1.6;
+}
+.strength-core .sc-setrow-workout{
+  grid-template-columns:30px 16px minmax(0,1fr) minmax(0,1fr);
+  column-gap:8px;align-items:center;
+}
+.strength-core .sc-setrow-workout .sc-check-workout{
+  display:grid;place-items:center;flex:none;
+  width:30px;height:30px;padding:0;margin-top:13px;
+  border:1.5px solid #ddbeaa;border-radius:50%;
+  background:#fffaf4;color:#b2836e;
+}
+.strength-core .sc-setrow-workout .sc-check-indicator{
+  display:block;width:11px;height:11px;border:1.5px solid currentColor;border-radius:50%;
+}
+.strength-core .sc-setrow-workout .sc-check-workout.done{
+  background:#bd8b77;border-color:#bd8b77;color:#fff;
+}
+.strength-core .sc-setrow-workout .sc-check-workout.done .sc-check-indicator{
+  width:auto;height:auto;border:0;border-radius:0;font-size:16px;font-weight:800;
+}
+@media(max-width:390px){
+ .strength-core .sc-workout-exhead{flex-wrap:nowrap;gap:6px}
+ .strength-core .sc-workout-exhead .sc-history-button.sc-btn.quiet{font-size:10px}
+ .strength-core .sc-workout-exhead .sc-action-check{width:27px;height:27px;min-width:27px;min-height:27px}
+ .strength-core .sc-exhead-last{padding-left:33px}
+ .strength-core .sc-setrow-workout{grid-template-columns:30px 14px minmax(0,1fr) minmax(0,1fr);column-gap:6px}
+}

@@ -32,3 +32,20 @@ body:has(#nav-strength.active) .topbar .micro{display:none}
 .motion-remember-row small{color:#9b8777;font-size:12px;line-height:1.5}
 .motion-forget{margin:7px 0 12px}
 .motion-forget button{font-size:12px}
+
+/* Action-level one-tap completion. Three states are derived from existing set.done flags. */
+.strength-core .sc-workout-exhead{align-items:flex-start;gap:10px}
+.strength-core .sc-exhead-title{flex:1;min-width:0;overflow-wrap:anywhere}
+.strength-core .sc-exhead-actions{display:flex;flex:0 0 auto;align-items:center;gap:4px}
+.strength-core .sc-exhead-actions .sc-btn.quiet{font-size:11px;padding:8px 2px}
+.strength-core .sc-action-check{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-height:34px;padding:6px 8px;border-radius:11px;border:1px solid #e3cab6;background:#fff9f4;color:#a37c63;font-size:11px;font-weight:650;white-space:nowrap}
+.strength-core .sc-action-check-symbol{display:grid;place-items:center;width:19px;height:19px;flex:none;border-radius:6px;border:1px solid currentColor;font-size:13px;line-height:1}
+.strength-core .sc-action-check.all{background:#f2ddcc;border-color:#d3a685;color:#8e5937}
+.strength-core .sc-action-check.all .sc-action-check-symbol{background:#c58a63;border-color:#c58a63;color:#fff}
+.strength-core .sc-action-check.partial{background:#fff3e5;border-color:#e4c4a5;color:#a7754b}
+.strength-core .sc-action-check:focus-visible{outline:2px solid #b57957;outline-offset:2px}
+@media(max-width:390px){
+ .strength-core .sc-workout-exhead{flex-wrap:wrap}
+ .strength-core .sc-exhead-actions{width:100%;justify-content:space-between}
+ .strength-core .sc-action-check{min-height:32px}
+}

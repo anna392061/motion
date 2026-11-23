@@ -107,9 +107,13 @@ function edit(){if(!draft)return home();return `<button class="sc-back" onclick=
  <div class="sc-actions">${btn('取消','MOTIONStrength.cancelEdit()','outline')}${btn('保存模板','MOTIONStrength.saveEdit()','solid')}</div>
  ${!editNew?`<div class="sc-delete">${btn('删除这个模板','MOTIONStrength.deleteTemplate()','quiet')}</div>`:''}`}
 function setRow(set,i,j,type){return `<div class="sc-setrow"><span>${j+1}</span><label>KG<input aria-label="第 ${j+1} 组重量" inputmode="decimal" type="text" autocomplete="off" spellcheck="false" value="${X(set.weight)}" onfocus="MOTIONStrength.selectNumber(this)" onclick="MOTIONStrength.selectNumber(this)" onchange="this.value=MOTIONStrength.setField('${type}',${i},${j},'weight',this.value)"></label><label>REPS<input aria-label="第 ${j+1} 组次数" inputmode="numeric" type="text" autocomplete="off" spellcheck="false" value="${X(set.reps)}" onfocus="MOTIONStrength.selectNumber(this)" onclick="MOTIONStrength.selectNumber(this)" onchange="this.value=MOTIONStrength.setField('${type}',${i},${j},'reps',this.value)"></label>${type==='workout'?`<button class="sc-check ${set.done?'done':''}" aria-label="完成第 ${j+1} 组" onclick="MOTIONStrength.mark(${i},${j})">${set.done?'✓':'○'}</button>`:`<button class="sc-check" aria-label="删除第 ${j+1} 组" onclick="MOTIONStrength.delSet(${i},${j})">×</button>`}</div>`}
-function workout(){if(!active){mode='home';return home()}return `<button class="sc-back" onclick="MOTIONStrength.go('home')">← 返回模板（训练会保留）</button>${top('● WORKOUT IN PROGRESS',active.name,'逐组记录真实完成情况，未完成组不会进入历史。')}
+function actionStatus(it){
+ const completed=it.sets.reduce((n,s)=>n+(s.done?1:0),0);
+ return {completed,total:it.sets.length,status:completed===0?'none':completed===it.sets.length?'all':'partial'};
+}
+function workout(){if(!active){mode='home';return home()}return `<button class="sc-back" onclick="MOTIONStrength.go('home')">← 返回模板（训练会保留）</button>${top('● WORKOUT IN PROGRESS',active.name,'点选动作旁的按钮可一次完成所有组；未勾选的组不会保存。')}
  <div class="sc-timer">开始时间 ${X(new Date(active.startAt).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}))} · 计时中</div>
- ${active.items.map((it,i)=>`<section class="sc-exercise"><div class="sc-exhead"><div><b>${i+1}. ${X(asName(it.id))}</b><small>${X(lastStr(it.id))}</small></div>${btn('查看历史 →',`MOTIONStrength.openDetail('${it.id}','workout')`,'quiet')}</div>${it.sets.map((s,j)=>setRow(s,i,j,'workout')).join('')}<div class="sc-mini sc-line">${btn('＋ 一组',`MOTIONStrength.addSet(${i})`,'quiet')}${btn('替换',`MOTIONStrength.pick('workout',${i})`,'quiet')}${btn('移除',`MOTIONStrength.removeItem(${i})`,'quiet')}${btn('↑',`MOTIONStrength.move(${i},-1)`,'quiet')}${btn('↓',`MOTIONStrength.move(${i},1)`,'quiet')}</div></section>`).join('')}
+ ${active.items.map((it,i)=>{const {completed,total,status}=actionStatus(it);return `<section class="sc-exercise"><div class="sc-exhead sc-workout-exhead"><div class="sc-exhead-title"><b>${i+1}. ${X(asName(it.id))}</b><small>${X(lastStr(it.id))}</small></div><div class="sc-exhead-actions"><button type="button" class="sc-action-check ${status}" role="checkbox" aria-checked="${status==='partial'?'mixed':status==='all'}" aria-label="${X(asName(it.id))}：${completed}/${total}组完成，${status==='all'?'点击取消全部完成':'点击标记全部完成'}" onclick="MOTIONStrength.toggleExercise(${i})"><span class="sc-action-check-symbol" aria-hidden="true">${status==='all'?'✓':status==='partial'?'−':'○'}</span><span>${status==='all'?'已完成':status==='partial'?'部分完成':'全选'}</span></button>${btn('查看历史 →',`MOTIONStrength.openDetail('${it.id}','workout')`,'quiet')}</div></div>${it.sets.map((s,j)=>setRow(s,i,j,'workout')).join('')}<div class="sc-mini sc-line">${btn('＋ 一组',`MOTIONStrength.addSet(${i})`,'quiet')}${btn('替换',`MOTIONStrength.pick('workout',${i})`,'quiet')}${btn('移除',`MOTIONStrength.removeItem(${i})`,'quiet')}${btn('↑',`MOTIONStrength.move(${i},-1)`,'quiet')}${btn('↓',`MOTIONStrength.move(${i},1)`,'quiet')}</div></section>`}).join('')}
  ${btn('＋ 添加动作',"MOTIONStrength.pick('workout')",'outline sc-full')}
  <div class="sc-actions">${btn('放弃训练','MOTIONStrength.discard()','outline')}${btn('完成并保存','MOTIONStrength.finish()','solid')}</div>`}
 function category(e){const m=[...(e.primary||[]),...(e.secondary||[])];if(m.some(id=>['gluteMax','gluteMed','hamstrings','quads','calves'].includes(id)))return '臀腿';if(m.some(id=>['lats','traps','rearDelts','erectors'].includes(id)))return '背肩';if(m.some(id=>['pecs','triceps','biceps','delts'].includes(id)))return '胸臂';return '核心'}
@@ -215,6 +219,13 @@ function removeItem(i){const c=mode==='edit'?draft:active;if(!c)return;c.items.s
 function addSet(i){const c=mode==='edit'?draft:active,it=c?.items?.[i];if(!it||it.sets.length>=25)return;let last=it.sets.at(-1)||createSet();it.sets.push({...last,done:false});if(c===active)keepActive();refresh()}
 function delSet(i,j){const it=draft?.items?.[i];if(!it||it.sets.length<=1){toast('至少保留一组');return}it.sets.splice(j,1);refresh()}
 function mark(i,j){let s=active?.items?.[i]?.sets?.[j];if(!s)return;s.done=!s.done;keepActive();refresh()}
+function toggleExercise(i){
+ const sets=active?.items?.[i]?.sets;
+ if(!sets?.length)return;
+ const complete=!sets.every(s=>s.done);
+ sets.forEach(s=>{s.done=complete});
+ keepActive();refresh();
+}
 function start(id){if(active&&!confirm('已有未完成训练，是否放弃并开始新训练？'))return;let t=templates.find(x=>x.id===id);if(!t||!t.items.length){toast('先在模板中添加动作');return}active={id:gen(),name:t.name,templateId:t.id,startAt:Date.now(),items:clone(t.items).map(x=>({...x,sets:x.sets.map(s=>({...s,done:false}))}))};keepActive();mode='workout';refresh()}
 function resume(){if(!active)return;mode='workout';refresh()}
 function discard(){if(!confirm('丢弃这次未完成的训练？此前的历史记录不会受到影响。'))return;active=null;keepActive();mode='home';refresh()}
@@ -238,7 +249,7 @@ function restoreLegacyPlan(plan){
  else templates.unshift({id:'legacy-lower-a',name:'Lower Body A',desc:'从旧版训练计划恢复',items});
  saveTemplates();refresh();
 }
-window.MOTIONStrength={screen,go,openTemplateEditor,editTemplate:openTemplateEditor,restoreLegacyPlan,newTemplate,saveEdit,cancelEdit,deleteTemplate,editName:v=>{if(draft)draft.name=v},editDescription:v=>{if(draft)draft.desc=v},move,removeItem,addSet,delSet,mark,setField,selectNumber,start,resume,discard,finish,pick,choose,backFromLibrary,openDetail,backFromDetail,quickAdd,newCustom,editCustom,cancelCustom,saveCustom,getCustomExercises,restoreCustomExercises,search:searchFor,filter:setFilter,note:(id,value)=>{state.notes[id]=value;persist()},getTemplates:()=>clone(templates),restoreTemplates};
+window.MOTIONStrength={screen,go,openTemplateEditor,editTemplate:openTemplateEditor,restoreLegacyPlan,newTemplate,saveEdit,cancelEdit,deleteTemplate,editName:v=>{if(draft)draft.name=v},editDescription:v=>{if(draft)draft.desc=v},move,removeItem,addSet,delSet,mark,toggleExercise,setField,selectNumber,start,resume,discard,finish,pick,choose,backFromLibrary,openDetail,backFromDetail,quickAdd,newCustom,editCustom,cancelCustom,saveCustom,getCustomExercises,restoreCustomExercises,search:searchFor,filter:setFilter,note:(id,value)=>{state.notes[id]=value;persist()},getTemplates:()=>clone(templates),restoreTemplates};
 // Override only the Strength page. All original activity, syncing, calendar and gear functions remain intact.
 strength=function(){return window.MOTIONStrength.screen()};
 // Integrate the remember-token control into the existing settings screen. Preserve

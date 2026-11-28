@@ -243,8 +243,8 @@ importSelectedActivities=async function(){
         else await importIntervalsCandidate(full,c.id);
         if(existing){
           for(const [k,v] of Object.entries(full)){
-            if(['routePoints','hrSeries','altitudeSeries','speedSeries','paceSeries','cadenceSeries','powerSeries','splits','gain','cal','power','hr','distance','speed','pace','minutes','fitChecked','fitDecoder','streamsChecked','detailChecked'].includes(k) && v!==undefined && v!==null && (!Array.isArray(v)||v.length)){
-              if(k==='routePoints'||k==='splits'||k.endsWith('Series')||existing[k]==null||existing[k]===0)existing[k]=v;
+            if(['routePoints','routeTimedPoints','distanceTimeSeries','hrSeries','altitudeSeries','speedSeries','paceSeries','cadenceSeries','powerSeries','splits','gain','cal','power','hr','distance','speed','pace','minutes','duration','cyclingRaw','cyclingSport','fitChecked','fitDecoder','streamsChecked','detailChecked'].includes(k) && v!==undefined && v!==null && (!Array.isArray(v)||v.length)){
+              if(k==='routePoints'||k==='routeTimedPoints'||k==='cyclingRaw'||k==='splits'||k.endsWith('Series')||existing[k]==null||existing[k]===0||(full.type==='cycle'&&['duration','minutes','distance','speed','power'].includes(k)))existing[k]=v;
             }
           }
           await storeActivity(existing);updated++;

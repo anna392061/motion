@@ -55,7 +55,7 @@ const activityBeforeV14=activityOverlay;
 activityOverlay=function(){let html=activityBeforeV14();const a=state.manual.find(x=>x.id===state.activityID);if(!a)return html;let extras='';
 if(a.type==='run')extras+=shoePickerForActivity(a);
 if(a.type==='run'&&a.paceSeries?.length>1)extras+=motionPaceGraph(a.paceSeries);
-if(a.type==='cycle'&&a.speedSeries?.length>1)extras+=graphSVG(a.speedSeries.map(p=>[p[0],p[1]*3.6]),'SPEED · 速度','km/h','#c57741');
+if(a.type==='cycle'&&a.speedSeries?.length>1)extras+=(window.MOTIONCycling?MOTIONCycling.rawChart:graphSVG)(a.speedSeries.map(p=>[p[0],p[1]*3.6]),'SPEED · 速度','km/h','#c57741');
 if(a.cadenceSeries?.length>1&&(a.type==='run'||a.type==='cycle')){
   // FIT / Intervals cadence can be strides/min or steps/min; normalize for display.
   // Conversion is display-only; never modify stored cadenceSeries or backups.
@@ -67,11 +67,11 @@ if(a.cadenceSeries?.length>1&&(a.type==='run'||a.type==='cycle')){
   const median=cadenceSamples.length?cadenceSamples[Math.floor(cadenceSamples.length/2)]:0;
   const runScale=isRunning&&median>0&&median<125?2:1;
   const cadencePoints=isRunning?a.cadenceSeries.map(p=>[p[0],p[1]*runScale]):a.cadenceSeries;
-  extras+=graphSVG(cadencePoints,
+  extras+=(!isRunning&&window.MOTIONCycling?MOTIONCycling.rawChart:graphSVG)(cadencePoints,
     isRunning?'RUNNING CADENCE · 步频':'CYCLING CADENCE · 踏频',
     isRunning?'步/分钟':'rpm','#a27f5f');
 }
-if(a.powerSeries?.length>1)extras+=graphSVG(a.powerSeries,'POWER · 功率','W','#a67b60');
+if(a.powerSeries?.length>1)extras+=(a.type==='cycle'&&window.MOTIONCycling?MOTIONCycling.rawChart:graphSVG)(a.powerSeries,'POWER · 功率','W','#a67b60');
 if(a.type==='cycle'&&window.MOTIONCycling)extras+=MOTIONCycling.gradeChart(a);
 if(a.type==='cycle'&&a.cal!=null)extras+=`<section class="card p18 section"><div class="micro">ACTIVE CALORIES</div><h2>${Math.round(a.cal)} kcal</h2></section>`;
 if(a.type==='cycle'&&!window.MOTIONCycling&&Number.isFinite(a.power))extras+=`<section class="card p18 section"><div class="micro">AVERAGE POWER</div><h2>${a.power} W</h2></section>`;
@@ -131,7 +131,7 @@ function decodeRawFit(bytes){
  const scalar=(field,scale,offset=0)=>{const v=item[field],invalid=([3,4].includes(field)?255:[5,73,78].includes(field)?4294967295:65535);return Number.isFinite(v)&&v!==invalid?v/scale-offset:null};
  rows.push({t,hr:scalar(3,1),dist:scalar(5,100),alt:scalar(78,5,500)??scalar(2,5,500),speed:scalar(73,1000)??scalar(6,1000),cadence:scalar(4,1),power:scalar(7,1)});
  }
- const s=sessions.at(-1)||{};return {rows,route,startMs:firstTs===null?null:firstTs*1000+epoch,events:events.map(e=>({t:e.stamp-firstTs,action:e.action})),session:{sport:s[5],normalizedPower:s[34]===65535?null:s[34],avgCadence:s[18]===255?null:s[18],totalAscent:s[22],totalCalories:s[11],avgHeartRate:s[16],avgPower:s[20]===65535?null:s[20],totalDistance:Number.isFinite(s[9])?s[9]/100:null,totalTimerTime:Number.isFinite(s[8])?s[8]/1000:null,avgSpeed:Number.isFinite(s[14])?s[14]/1000:null}};
+ const s=sessions.at(-1)||{};return {rows,route,startMs:firstTs===null?null:firstTs*1000+epoch,events:events.map(e=>({t:e.stamp-firstTs,action:e.action})),session:{sport:s[5],normalizedPower:s[34]===65535?null:s[34],avgCadence:s[18]===255?null:s[18],totalAscent:s[22],totalCalories:s[11],avgHeartRate:s[16],avgPower:s[20]===65535?null:s[20],totalDistance:Number.isFinite(s[9])&&s[9]!==4294967295?s[9]/100:null,totalElapsedTime:Number.isFinite(s[7])&&s[7]!==4294967295?s[7]/1000:null,totalTimerTime:Number.isFinite(s[8])&&s[8]!==4294967295?s[8]/1000:null,avgSpeed:Number.isFinite(s[14])?s[14]/1000:null}};
 }
 async function getFITContents(zipBuffer){try{return await zipFitData(zipBuffer)}catch(primaryError){try{const fflate=await import('https://esm.sh/fflate@0.8.2?bundle');const unzipped=fflate.unzipSync(new Uint8Array(zipBuffer));for(const [filename,bytes] of Object.entries(unzipped))if(filename.toLowerCase().endsWith('.fit'))return bytes.slice().buffer;throw Error('ZIP 中不存在 FIT 文件')}catch(e){throw Error('无法解压 Garmin FIT：'+primaryError.message+'。浏览器需联网加载解压组件。')}}}
 async function parseGarminFull(buffer,activityType){let decoded=null,usedSdk=false;try{const mod=await import('https://esm.sh/@garmin/fitsdk@21.218.0?bundle');const {Decoder,Stream}=mod;const s=Stream.fromArrayBuffer(buffer);const result=new Decoder(s).read();if((result.messages?.recordMesgs||[]).length){decoded=mapFITMessages(result.messages);usedSdk=true}}catch(e){console.info('Official FIT SDK not available; using local decoder',e.message)}

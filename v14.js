@@ -73,7 +73,7 @@ if(a.cadenceSeries?.length>1&&(a.type==='run'||a.type==='cycle')){
 }
 if(a.powerSeries?.length>1)extras+=graphSVG(a.powerSeries,'POWER · 功率','W','#a67b60');
 if(a.type==='cycle'&&a.cal!=null)extras+=`<section class="card p18 section"><div class="micro">ACTIVE CALORIES</div><h2>${Math.round(a.cal)} kcal</h2></section>`;
-if(a.type==='cycle'&&Number.isFinite(a.power))extras+=`<section class="card p18 section"><div class="micro">AVERAGE POWER</div><h2>${a.power} W</h2></section>`;
+if(a.type==='cycle'&&!window.MOTIONCycling&&Number.isFinite(a.power))extras+=`<section class="card p18 section"><div class="micro">AVERAGE POWER</div><h2>${a.power} W</h2></section>`;
 html=html.replace('<div class="card p18 section"><div class="eyebrow">管理这条记录</div>',extras+'<div class="card p18 section"><div class="eyebrow">管理这条记录</div>');return html};
 // v1 backup-compatible schema, adding gear and richer activity fields.
 exportData=function(){const data={format:'motion-backup-v1',appVersion:'1.4',exportedAt:new Date().toISOString(),activities:state.manual,gear:gearList,plan:state.plan,favorites:state.favorites,wishlist:state.wishlist,notes:state.notes};downloadJSON(data,'MOTION-backup-'+dateKey(new Date())+'.json');toast('完整备份已下载，请保存在私密位置')};
@@ -115,27 +115,29 @@ function pointCoord(raw){const n=Number(raw);if(!Number.isFinite(n))return null;
 function asTimestamp(x){if(x instanceof Date)return x.getTime();if(typeof x==='string')return Date.parse(x);if(typeof x==='number')return x>1e12?x:x>1e9?x*1000:x*1000+631065600000;return NaN}
 function mapFITMessages(messages){const records=messages.recordMesgs||messages.records||messages.record||[];const sessions=messages.sessionMesgs||messages.sessions||messages.session||[];const session=sessions.at?.(-1)||{};const rows=[],route=[];let startMs=NaN;
  for(const r of records){const stamp=asTimestamp(r.timestamp);if(!Number.isFinite(stamp))continue;if(!Number.isFinite(startMs))startMs=stamp;const t=(stamp-startMs)/1000;if(t<0)continue;const lat=pointCoord(r.positionLat),lon=pointCoord(r.positionLong);if(lat!==null&&lon!==null&&Math.abs(lat)<=90&&Math.abs(lon)<=180)route.push([lat,lon,t]);rows.push({t,hr:getMetric(r,'heartRate'),dist:getMetric(r,'distance'),alt:getMetric(r,'enhancedAltitude','altitude'),speed:getMetric(r,'enhancedSpeed','speed'),cadence:getMetric(r,'cadence'),power:getMetric(r,'power')})}
- return {rows,route,session,startMs};}
+ return {rows,route,session,startMs,events:window.MOTIONCycling?.timerEvents(messages.eventMesgs||[],startMs,asTimestamp)||[]};}
 function decodeRawFit(bytes){
- const b=new Uint8Array(bytes),d=new DataView(bytes);if(b.length<16||String.fromCharCode(...b.slice(8,12))!=='.FIT')throw Error('FIT 文件头无效');const head=b[0],end=Math.min(head+d.getUint32(4,true),b.length-2);let i=head,lastTs=null;const definitions={},rows=[],route=[],sessions=[];let firstTs=null;const epoch=631065600000;
+ const b=new Uint8Array(bytes),d=new DataView(bytes);if(b.length<16||String.fromCharCode(...b.slice(8,12))!=='.FIT')throw Error('FIT 文件头无效');const head=b[0],end=Math.min(head+d.getUint32(4,true),b.length-2);let i=head,lastTs=null;const definitions={},rows=[],route=[],sessions=[],events=[];let firstTs=null;const epoch=631065600000;
  function num(pos,size,type,le){if(pos+size>b.length)return null;const t=type&31;try{if(t===0||t===2||t===10)return b[pos];if(t===1)return d.getInt8(pos);if(t===3)return d.getInt16(pos,le);if(t===4||t===11)return d.getUint16(pos,le);if(t===5)return d.getInt32(pos,le);if(t===6||t===12)return d.getUint32(pos,le);if(t===8)return d.getFloat32(pos,le);if(t===9)return d.getFloat64(pos,le)}catch{}return null}
  while(i<end){const h=b[i++],compressed=!!(h&128),local=compressed?(h>>5)&3:h&15,definition=!compressed&&!!(h&64);
  if(definition){if(i+5>end)break;i++;const le=b[i++]===0;const global=d.getUint16(i,le);i+=2;const count=b[i++],fields=[];for(let f=0;f<count;f++){fields.push({id:b[i],size:b[i+1],type:b[i+2]});i+=3}let dev=0;if(h&32){const n=b[i++];for(let f=0;f<n;f++){dev+=b[i+1];i+=3}}definitions[local]={le,global,fields,dev};continue}
  const def=definitions[local];if(!def)throw Error('FIT 缺少字段定义');const item={};for(const f of def.fields){item[f.id]=num(i,f.size,f.type,def.le);i+=f.size}i+=def.dev;if(i>end)break;
  if(compressed){const offset=h&31;let timestamp=lastTs===null?null:(lastTs&~31)+offset;if(timestamp!==null&&timestamp<=lastTs)timestamp+=32;if(timestamp!==null)item[253]=timestamp}
  if(Number.isFinite(item[253]))lastTs=item[253];
- if(def.global===18){sessions.push(item);continue}if(def.global!==20)continue;
+ if(def.global===18){sessions.push(item);continue}if(def.global===21){const action=window.MOTIONCycling?.eventAction(item[0],item[1]);if(action&&Number.isFinite(item[253]))events.push({stamp:item[253],action});continue}if(def.global!==20)continue;
  let ts=getMetric(item,'253');if(ts===null)continue;if(firstTs===null)firstTs=ts;const t=ts-firstTs;if(t<0||t>864000)continue;
  const latitude=item[0],longitude=item[1];if(Number.isFinite(latitude)&&Number.isFinite(longitude)&&latitude!==2147483647&&longitude!==2147483647){const lat=latitude*180/2147483648,lon=longitude*180/2147483648;if(Math.abs(lat)<=90&&Math.abs(lon)<=180)route.push([lat,lon,t])}
- const scalar=(field,scale,offset=0)=>Number.isFinite(item[field])?item[field]/scale-offset:null;
+ const scalar=(field,scale,offset=0)=>{const v=item[field],invalid=([3,4].includes(field)?255:[5,73,78].includes(field)?4294967295:65535);return Number.isFinite(v)&&v!==invalid?v/scale-offset:null};
  rows.push({t,hr:scalar(3,1),dist:scalar(5,100),alt:scalar(78,5,500)??scalar(2,5,500),speed:scalar(73,1000)??scalar(6,1000),cadence:scalar(4,1),power:scalar(7,1)});
  }
- const s=sessions.at(-1)||{};return {rows,route,startMs:firstTs===null?null:firstTs*1000+epoch,session:{totalAscent:s[22],totalCalories:s[11],avgHeartRate:s[16],avgPower:s[20],totalDistance:Number.isFinite(s[9])?s[9]/100:null,totalTimerTime:Number.isFinite(s[8])?s[8]/1000:null,avgSpeed:Number.isFinite(s[14])?s[14]/1000:null}};
+ const s=sessions.at(-1)||{};return {rows,route,startMs:firstTs===null?null:firstTs*1000+epoch,events:events.map(e=>({t:e.stamp-firstTs,action:e.action})),session:{sport:s[5],normalizedPower:s[34]===65535?null:s[34],avgCadence:s[18]===255?null:s[18],totalAscent:s[22],totalCalories:s[11],avgHeartRate:s[16],avgPower:s[20]===65535?null:s[20],totalDistance:Number.isFinite(s[9])?s[9]/100:null,totalTimerTime:Number.isFinite(s[8])?s[8]/1000:null,avgSpeed:Number.isFinite(s[14])?s[14]/1000:null}};
 }
 async function getFITContents(zipBuffer){try{return await zipFitData(zipBuffer)}catch(primaryError){try{const fflate=await import('https://esm.sh/fflate@0.8.2?bundle');const unzipped=fflate.unzipSync(new Uint8Array(zipBuffer));for(const [filename,bytes] of Object.entries(unzipped))if(filename.toLowerCase().endsWith('.fit'))return bytes.slice().buffer;throw Error('ZIP 中不存在 FIT 文件')}catch(e){throw Error('无法解压 Garmin FIT：'+primaryError.message+'。浏览器需联网加载解压组件。')}}}
-async function parseGarminFull(buffer){let decoded=null,usedSdk=false;try{const mod=await import('https://esm.sh/@garmin/fitsdk@21.218.0?bundle');const {Decoder,Stream}=mod;const s=Stream.fromArrayBuffer(buffer);const result=new Decoder(s).read();if((result.messages?.recordMesgs||[]).length){decoded=mapFITMessages(result.messages);usedSdk=true}}catch(e){console.info('Official FIT SDK not available; using local decoder',e.message)}
+async function parseGarminFull(buffer,activityType){let decoded=null,usedSdk=false;try{const mod=await import('https://esm.sh/@garmin/fitsdk@21.218.0?bundle');const {Decoder,Stream}=mod;const s=Stream.fromArrayBuffer(buffer);const result=new Decoder(s).read();if((result.messages?.recordMesgs||[]).length){decoded=mapFITMessages(result.messages);usedSdk=true}}catch(e){console.info('Official FIT SDK not available; using local decoder',e.message)}
  if(!decoded||!decoded.rows.length){decoded=decodeRawFit(buffer)}
  const {rows,route,session,startMs}=decoded;
+ const fitCycling=activityType==='cycle'||(activityType==null&&(['cycling','2'].includes(String(session.sport).toLowerCase())));
+ const cyclingRaw=fitCycling&&window.MOTIONCycling?MOTIONCycling.fromDecoded(decoded):undefined;
  const pairs=(name)=>samplePairs(rows.filter(r=>Number.isFinite(r[name])).map(r=>[r.t,r[name]]));
  const hrSeries=pairs('hr'),altitudeSeries=pairs('alt'),speedSeries=pairs('speed'),powerSeries=pairs('power'),cadenceSeries=pairs('cadence');
  const drows=rows.filter(r=>Number.isFinite(r.dist)).map(r=>[r.t,r.dist]);
@@ -147,9 +149,10 @@ async function parseGarminFull(buffer){let decoded=null,usedSdk=false;try{const 
  const hr=getMetric(session,'avgHeartRate')??(hrSeries.length?Math.round(hrSeries.reduce((n,p)=>n+p[1],0)/hrSeries.length):null);
  const power=getMetric(session,'avgPower')??(powerSeries.length?Math.round(powerSeries.reduce((n,p)=>n+p[1],0)/powerSeries.length):null);
  const paceSeries=samplePairs(rows.filter(r=>Number.isFinite(r.speed)&&r.speed>.2).map(r=>[r.t,1000/r.speed]));
- return {start:Number.isFinite(startMs)?new Date(startMs).toISOString():null,routePoints:samplePairs(route,6500).map(p=>p.slice(0,2)),routeTimedPoints:samplePairs(route,6500),distanceTimeSeries:samplePairs(drows,5000),hrSeries,altitudeSeries,speedSeries,powerSeries,cadenceSeries,paceSeries,splits:calcKmSplits(drows.map(p=>p[0]),drows.map(p=>p[1])),gain,hr,power,cal:getMetric(session,'totalCalories'),distance:km,minutes,fitChecked:true,fitDecoder:usedSdk?'Garmin FIT SDK':'Local FIT parser'};
+ return {...(cyclingRaw?{cyclingRaw,cyclingSport:true}:{}),start:Number.isFinite(startMs)?new Date(startMs).toISOString():null,routePoints:samplePairs(route,6500).map(p=>p.slice(0,2)),routeTimedPoints:samplePairs(route,6500),distanceTimeSeries:samplePairs(drows,5000),hrSeries,altitudeSeries,speedSeries,powerSeries,cadenceSeries,paceSeries,splits:calcKmSplits(drows.map(p=>p[0]),drows.map(p=>p[1])),gain,hr,power,cal:getMetric(session,'totalCalories'),distance:km,minutes,fitChecked:true,fitDecoder:usedSdk?'Garmin FIT SDK':'Local FIT parser'};
 }
-async function importGarminCandidate(item,id){const zip=await callWorker('/sync/garmin/fit?id='+encodeURIComponent(id),'buffer');const fit=await getFITContents(zip);const full=await parseGarminFull(fit);for(const [k,val] of Object.entries(full))if(val!==undefined&&val!==null&&(!Array.isArray(val)||val.length))item[k]=val;
+async function importGarminCandidate(item,id){const zip=await callWorker('/sync/garmin/fit?id='+encodeURIComponent(id),'buffer');const fit=await getFITContents(zip);const full=await parseGarminFull(fit,item.type);for(const [k,val] of Object.entries(full))if(val!==undefined&&val!==null&&(!Array.isArray(val)||val.length))item[k]=val;
+ if(item.type==='cycle'&&Number.isFinite(item.cyclingRaw?.timer)&&item.cyclingRaw.timer>0){item.minutes=item.cyclingRaw.timer/60;item.duration=MOTIONCycling.timeLabel(item.cyclingRaw.timer)}
  if(item.distance&&item.minutes){item.speed=+(item.distance/(item.minutes/60)).toFixed(1);if(item.type==='run')item.pace=fmtPace(item.minutes*60/item.distance)}item.route=!!item.routePoints?.length;return item}
 async function importIntervalsCandidate(item,id){const detail=await callWorker('/sync/intervals/detail?id='+encodeURIComponent(id)).catch(e=>{console.info('Activity detail unavailable',e.message);return null});if(detail){const improved=normalizedRecord(detail,'intervals');if(improved){for(const k of ['gain','cal','hr','distance','pace','duration','speed'])if(improved[k]!==null&&improved[k]!==undefined)item[k]=improved[k]}}
  try{const raw=await callWorker('/sync/intervals/streams?id='+encodeURIComponent(id));const streams=parseIntervalStreams(raw);Object.assign(item,Object.fromEntries(Object.entries(streams).filter(([,v])=>Array.isArray(v)&&v.length)));if(streams.speedSeries?.length){item.paceSeries=samplePairs(streams.speedSeries.filter(p=>p[1]>.2).map(([t,v])=>[t,1000/v]))}item.streamsChecked=true}catch(e){console.info('Intervals streams unavailable',e.message)}
@@ -157,7 +160,7 @@ async function importIntervalsCandidate(item,id){const detail=await callWorker('
 async function importSelectedActivities(){if(syncBusy||!syncSelected.size)return;syncBusy=true;const targets=syncCandidates.filter(c=>syncSelected.has(c.key));let added=0,updated=0,skipped=0,errors=[];syncRender();for(let idx=0;idx<targets.length;idx++){
  const c=targets[idx],status=document.querySelector('#sync-status');if(status)status.textContent=`正在导入 ${idx+1}/${targets.length} · ${c.item.title}`;
  try{const item={...c.item};if(c.source==='garmin')await importGarminCandidate(item,c.id);else await importIntervalsCandidate(item,c.id);
-  const exists=hasDuplicate(item);if(exists){for(const [k,v] of Object.entries(item))if(['routePoints','routeTimedPoints','distanceTimeSeries','hrSeries','altitudeSeries','speedSeries','paceSeries','cadenceSeries','powerSeries','splits','gain','cal','power','hr','distance','speed','pace','fitChecked','fitDecoder','streamsChecked','detailChecked'].includes(k)&&v!==null&&v!==undefined&&(!Array.isArray(v)||v.length)){if(k==='routePoints'||k==='routeTimedPoints'||k==='splits'||k.endsWith('Series')||exists[k]==null||exists[k]===0)exists[k]=v}await storeActivity(exists);updated++}
+  const exists=hasDuplicate(item);if(exists){for(const [k,v] of Object.entries(item))if(['routePoints','routeTimedPoints','distanceTimeSeries','hrSeries','altitudeSeries','speedSeries','paceSeries','cadenceSeries','powerSeries','splits','gain','cal','power','hr','distance','speed','pace','cyclingRaw','cyclingSport','fitChecked','fitDecoder','streamsChecked','detailChecked'].includes(k)&&v!==null&&v!==undefined&&(!Array.isArray(v)||v.length)){if(k==='routePoints'||k==='routeTimedPoints'||k==='cyclingRaw'||k==='splits'||k.endsWith('Series')||exists[k]==null||exists[k]===0)exists[k]=v}await storeActivity(exists);updated++}
   else{if(item.type==='run'){item.shoeId=importShoeChoices[c.key]||null}const outcome=await addActivity(item);if(outcome==='added')added++;else skipped++}
  }catch(e){errors.push(`${c.item.date} ${c.item.title}: ${e.message}`);console.warn('Import failed:',c.key,e)}
  }
@@ -186,10 +189,10 @@ const backupRestoreUsesGear=true;
 // A locally selected .fit file can also use the richer decoder, without cloud access.
 const originalImportFileV14=importFile;
 importFile=async function(file){if(!file.name.toLowerCase().endsWith('.fit'))return originalImportFileV14(file);
- const decoded=await parseGarminFull(await file.arrayBuffer());
+ const decoded=await parseGarminFull(await file.arrayBuffer(),/cycl|ride|bike|骑行/i.test(file.name)?'cycle':undefined);
  if(!Number.isFinite(decoded.minutes)||decoded.minutes<=0)throw Error('FIT 文件不包含有效运动时长');
  const start=decoded.start||new Date().toISOString(),fileLower=file.name.toLowerCase();
- const type=/cycl|ride|bike|骑行/.test(fileLower)?'cycle':'run';
+ const type=decoded.cyclingSport||/cycl|ride|bike|骑行/.test(fileLower)?'cycle':'run';
  const a={id:'file-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,7),sourceKey:'fit:'+start+':'+decoded.distance,source:'FIT 文件',start,date:start.slice(0,10),type,title:file.name.replace(/\.fit$/i,''),minutes:decoded.minutes};
  for(const [k,v] of Object.entries(decoded))if(v!==null&&v!==undefined)a[k]=v;
  if(a.distance&&a.minutes){a.speed=+(a.distance/(a.minutes/60)).toFixed(1);a.pace=fmtPace(a.minutes*60/a.distance)}

@@ -20,7 +20,20 @@ const count=(function runTests(api){
  const full=api.legacy({distance:31.97,splits:Array.from({length:32},(_,i)=>({km:i+1,distanceKm:i===31?.97:1,seconds:144}))},5);
  test(full.rows.length===7&&near(full.rows.at(-1).end,31.97)&&!full.partial,"legacy final segment");
  test(api.renderSplits({type:"cycle",distance:31.97,splits:secs.map((seconds,i)=>({km:i+1,distanceKm:1,seconds}))}).includes("均速 km/h"),"render cycling speed unit");
- test(api.renderSplits({type:"cycle",sourceKey:"garmin:123"}).includes("补全 Garmin FIT 数据"),"legacy refresh button");
+ test(api.renderSplits({type:"cycle",sourceKey:"garmin:123"}).includes("正在准备原始数据更新"),"automatic migration status");
  const grade=api.gradeSeries({samples:Array.from({length:101},(_,t)=>[t,t*10,10,100,80,120,t*.5])});test(grade.length===10&&grade.every(p=>near(p[1],5)),"5 percent grade");
+ 
+ const stop={samples:Array.from({length:1301},(_,t)=>[t,(t<=600?t:t<700?600:t-100)*10,t>=600&&t<700?0:10,t>=600&&t<700?999:100,80,120,20]),timer:1300,elapsed:1300,events:[{t:0,action:"start"},{t:1300,action:"stop"}]};
+ const stationary=api.analyze(stop,5);test(near(stationary.overall.seconds,1200)&&near(stationary.overall.stopped,100),"stationary excluding stops");test(near(stationary.overall.power,100),"exclude stationary power");test(stationary.checks.time&&stationary.checks.distance,"stationary reconciliation");
+ test(near(stationary.rows.reduce((s,r)=>s+r.seconds,0),stationary.overall.seconds),"sum moving");test(near(stationary.rows.reduce((s,r)=>s+r.stopped,0),100),"sum stopped");
+ const absent={...pause,samples:pause.samples.filter(r=>r[0]<600||r[0]>=700)};const gap=api.analyze(absent,5);test(near(gap.overall.seconds,1200)&&near(gap.overall.stopped,100),"FIT gap with pause");test(near(gap.overall.speed,36),"distance across pause not diluted");test(gap.checks.time&&gap.checks.distance,"gap reconciliation");
+ const unknown=api.analyze({...raw,samples:raw.samples.filter(r=>r[0]<500||r[0]>550)},5);test(unknown.overall.seconds===null&&unknown.checks.unknownSeconds>0,"unknown active gap does not invent movement");test(unknown.rows[0].speed===null&&unknown.rows[1].speed===null&&near(unknown.rows[2].speed,36),"only affected splits suppressed across boundary");
+ const coast=api.analyze({...raw,samples:raw.samples.map(r=>[...r.slice(0,3),r[0]<1800?100:0,r[0]<1800?80:0,...r.slice(5)])},5);test(near(coast.overall.power,50)&&near(coast.overall.cadence,80),"coasting included in power excluded in cadence");test(near(coast.overall.seconds,3600),"coasting is moving");
+ const mismatch=api.analyze({...raw,distance:35000},5);test(mismatch.overall.speed===null&&!mismatch.checks.distanceMatchesSession,"session distance check");
+ test(api.needsRefresh({type:"cycle",sourceKey:"garmin:12"})&&!api.needsRefresh({type:"run",sourceKey:"garmin:12"}),"cycling-only migration");
+ test(!api.needsRefresh({type:"cycle",sourceKey:"garmin:12",cyclingRaw:{version:2,samples:[[0,0]]}}),"no repeat after migration");
+ test(api.needsRefresh({type:"cycle",cyclingRaw:{version:1,fitBase64:"abc",samples:[[0,0]]}}),"local FIT migration");
+ test(api.summaryFields({type:"cycle",cyclingRaw:stop,distance:12,power:999}).find(x=>x[0]==="平均功率")[1]==="100 W","summary uses segment calculation, not device avg");
+ test(api.timeLabel(0)==="0:00","zero stop display");
  return count;
 })(api);console.log(count+' cycling assertions passed');

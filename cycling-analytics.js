@@ -132,6 +132,25 @@ function renderSplits(a){
  const rows=data.rows.map(r=>[`${labelKm(r.start)}–${labelKm(r.end)}`,...(training?[fmt(r.power),fmt(r.np),fmt(r.cadence),fmt(r.hr)]:[timeLabel(r.seconds),fmt(r.speed,1),fmt(r.power),fmt(r.gain)])]);
  return header+`<div class="card p18" style="margin-top:12px;overflow-x:auto;padding-inline:12px"><table style="width:100%;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap"><thead><tr>${heads.map(x=>`<th scope="col" style="font-weight:500;padding:10px 3px;text-align:right">${x}</th>`).join("")}</tr></thead><tbody>${rows.map(row=>`<tr style="border-top:1px solid rgba(143,107,97,.16)">${row.map((x,i)=>`<td style="padding:13px 3px;text-align:right;${i===0||i===2&&!training?"font-weight:650;":""}">${x}</td>`).join("")}</tr>`).join("")}</tbody></table><p class="helper" style="margin-top:10px">时间：${data.basis}。${data.partial?"历史数据不完整，仅显示已有分段。":""}${data.source==="FIT"?"分段爬升为海拔平滑估算；踏频仅统计踩踏时段。":"补全 FIT 后可获取分段功率、踏频及爬升。"}${training?" NP 仅在至少10分钟且功率采样充分时计算。":""}</p>${refresh}</div></section>`;
 }
+function gradeSeries(raw){
+ const points=[];
+ for(const r of raw?.samples||[]){if(!finite(r[1])||!finite(r[6]))continue;const last=points.at(-1);if(!last||r[1]>last[0])points.push([r[1],r[6]])}
+ if(points.length<2)return [];
+ const start=points[0][0],end=points.at(-1)[0],result=[];let i=0;
+ function altitude(d){while(i+1<points.length&&points[i+1][0]<d)i++;const a=points[i],b=points[i+1];if(!a||!b||d<a[0]||d>b[0]||b[0]-a[0]>100)return null;return a[1]+(b[1]-a[1])*(d-a[0])/(b[0]-a[0])}
+ let before=altitude(start);
+ const step=100*Math.max(1,Math.ceil((end-start)/100/600));
+ for(let d=start+step;d<=end;d+=step){const after=altitude(d);if(finite(before)&&finite(after))result.push([(d-start-step/2)/1000,(after-before)/step*100]);else result.push([(d-start-step/2)/1000,null]);before=after}
+ return result;
+}
+function gradeChart(a){
+ const points=gradeSeries(a.cyclingRaw),valid=points.filter(p=>finite(p[1]));
+ if(valid.length<2)return "";
+ const xmax=points.at(-1)[0]+(points[1][0]-points[0][0])/2,max=Math.max(2,...valid.map(p=>Math.abs(p[1]))),W=340,H=130,pad=14;
+ const x=d=>pad+d/xmax*(W-2*pad),y=g=>H/2-g/max*(H/2-pad);
+ let path="",move=true;for(const [d,g] of points){if(!finite(g)){move=true;continue}path+=(move?"M":"L")+x(d).toFixed(1)+","+y(g).toFixed(1)+" ";move=false}
+ return `<div class="card p18 section metric-chart"><div class="micro">GRADE · 坡度</div><p class="chart-caption">根据海拔与距离估算 · 非瞬时坡度</p><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="骑行坡度与距离曲线"><line x1="${pad}" x2="${W-pad}" y1="${H/2}" y2="${H/2}" stroke="#ead7e1"/><path d="${path}" fill="none" stroke="#9b87b3" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg><div class="chart-labels"><span>0 km · 0% 基准线</span><span>${xmax.toFixed(1)} km</span></div></div>`;
+}
 function summaryFields(a){
  const r=analyze(a.cyclingRaw,5)?.overall;
  const fields=[["平均功率",r?.power??a.cyclingRaw?.power??a.power,"W"],["标准化功率",r?.np??a.cyclingRaw?.np,"W"],["平均踏频",r?.cadence??a.cyclingRaw?.cadence,"rpm"]];
@@ -154,7 +173,7 @@ async function enrich(){
  }catch(e){const s=document.getElementById("cycling-refresh-status");if(s)s.textContent="补全失败："+e.message;toast("补全失败，请检查 Garmin 连接")}
  finally{busy=false}
 }
-const api={DISTANCES,eventAction,timerEvents,fromDecoded,archiveFit,analyze,legacy,results,summaryFields,renderSplits,select,view,enrich,timeLabel};
+const api={DISTANCES,eventAction,timerEvents,fromDecoded,archiveFit,analyze,legacy,results,summaryFields,gradeSeries,gradeChart,renderSplits,select,view,enrich,timeLabel};
 if(typeof window!=="undefined"){window.MOTIONCycling=api;if(typeof openActivity==="function"){const previous=openActivity;openActivity=function(id){selectedKm=5;mode="basic";return previous(id)}}}
 return api;
 })();

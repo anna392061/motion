@@ -21,5 +21,6 @@ const count=(function runTests(api){
  test(full.rows.length===7&&near(full.rows.at(-1).end,31.97)&&!full.partial,"legacy final segment");
  test(api.renderSplits({type:"cycle",distance:31.97,splits:secs.map((seconds,i)=>({km:i+1,distanceKm:1,seconds}))}).includes("均速 km/h"),"render cycling speed unit");
  test(api.renderSplits({type:"cycle",sourceKey:"garmin:123"}).includes("补全 Garmin FIT 数据"),"legacy refresh button");
+ const grade=api.gradeSeries({samples:Array.from({length:101},(_,t)=>[t,t*10,10,100,80,120,t*.5])});test(grade.length===10&&grade.every(p=>near(p[1],5)),"5 percent grade");
  return count;
 })(api);console.log(count+' cycling assertions passed');

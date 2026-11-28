@@ -16,6 +16,7 @@ function eventAction(event,type){
 function timerEvents(events,startMs,asTimestamp){
  return (events||[]).map(e=>({t:(asTimestamp(e.timestamp)-startMs)/1000,action:eventAction(e.event,e.eventType)})).filter(e=>finite(e.t)&&e.action).sort((a,b)=>a.t-b.t);
 }
+function archiveFit(buffer){const bytes=new Uint8Array(buffer);let binary="";for(let i=0;i<bytes.length;i+=16384)binary+=String.fromCharCode(...bytes.subarray(i,i+16384));return btoa(binary)}
 function fromDecoded(decoded){
  const {rows,route,session,events}=decoded;
  const samples=rows.map(r=>[r.t,safe(r.dist),safe(r.speed,0,100),safe(r.power,0,5000),safe(r.cadence,0,300),safe(r.hr,0,255),safe(r.alt,-1000,10000)]);
@@ -102,7 +103,7 @@ function analyze(raw,km){
  if(finite(raw.power))result.power=raw.power;
  if(finite(raw.cadence))result.cadence=raw.cadence;
  if(!reliableTimer){result.np=finite(raw.np)?raw.np:null}
- return {rows:buckets.map(b=>finish(b,allowNP)),overall:result,basis:reliableTimer?"计时器时间":"记录时间（可能含暂停）",reliableTimer,estimated:true,source:"FIT"};
+ return {rows:buckets.map(b=>finish(b,allowNP)),overall:result,basis:reliableTimer?"计时器时间":"分段时间估算（计时口径未核实）",reliableTimer,estimated:true,source:"FIT"};
 }
 function legacy(a,km){
  const splits=a.splits||[];if(!splits.length)return null;
@@ -133,7 +134,7 @@ function renderSplits(a){
 }
 function summaryFields(a){
  const r=analyze(a.cyclingRaw,5)?.overall;
- const fields=[["平均功率",finite(a.power)?a.power:r?.power,"W"],["标准化功率",r?.np,"W"],["平均踏频",r?.cadence,"rpm"]];
+ const fields=[["平均功率",r?.power??a.cyclingRaw?.power??a.power,"W"],["标准化功率",r?.np??a.cyclingRaw?.np,"W"],["平均踏频",r?.cadence??a.cyclingRaw?.cadence,"rpm"]];
  return fields.filter(x=>finite(x[1])).map(([k,v,u])=>[k,`${fmt(v)} ${u}`]);
 }
 function replacePanel(){const a=state.manual.find(x=>x.id===state.activityID),panel=document.getElementById("cycling-splits");if(a?.type==="cycle"&&panel)panel.outerHTML=renderSplits(a)}
@@ -149,11 +150,11 @@ async function enrich(){
   if(!copy.cyclingRaw?.samples?.length)throw Error("FIT 中没有可用的骑行记录");
   // Only patch the selected activity; never overwrite user-entered metadata.
   for(const k of ["cyclingRaw","power","cadenceSeries","powerSeries","speedSeries","distanceTimeSeries","routeTimedPoints","routePoints","altitudeSeries","hrSeries","splits","fitChecked","fitDecoder","distance","minutes","speed","duration","gain","cal","hr"])if(copy[k]!=null)a[k]=copy[k];
-  await storeActivity(a);if(state.activityID===a.id)showOverlay();toast("骑行 FIT 数据已补全");
+  await storeActivity(a);if(state.activityID===a.id&&state.overlay==="activity")showOverlay();toast("骑行 FIT 数据已补全");
  }catch(e){const s=document.getElementById("cycling-refresh-status");if(s)s.textContent="补全失败："+e.message;toast("补全失败，请检查 Garmin 连接")}
  finally{busy=false}
 }
-const api={DISTANCES,eventAction,timerEvents,fromDecoded,analyze,legacy,results,summaryFields,renderSplits,select,view,enrich,timeLabel};
-if(typeof window!=="undefined")window.MOTIONCycling=api;
+const api={DISTANCES,eventAction,timerEvents,fromDecoded,archiveFit,analyze,legacy,results,summaryFields,renderSplits,select,view,enrich,timeLabel};
+if(typeof window!=="undefined"){window.MOTIONCycling=api;if(typeof openActivity==="function"){const previous=openActivity;openActivity=function(id){selectedKm=5;mode="basic";return previous(id)}}}
 return api;
 })();

@@ -138,6 +138,7 @@ async function parseGarminFull(buffer,activityType){let decoded=null,usedSdk=fal
  const {rows,route,session,startMs}=decoded;
  const fitCycling=activityType==='cycle'||(activityType==null&&(['cycling','2'].includes(String(session.sport).toLowerCase())));
  const cyclingRaw=fitCycling&&window.MOTIONCycling?MOTIONCycling.fromDecoded(decoded):undefined;
+ if(cyclingRaw)cyclingRaw.fitBase64=MOTIONCycling.archiveFit(buffer);
  const pairs=(name)=>samplePairs(rows.filter(r=>Number.isFinite(r[name])).map(r=>[r.t,r[name]]));
  const hrSeries=pairs('hr'),altitudeSeries=pairs('alt'),speedSeries=pairs('speed'),powerSeries=pairs('power'),cadenceSeries=pairs('cadence');
  const drows=rows.filter(r=>Number.isFinite(r.dist)).map(r=>[r.t,r.dist]);

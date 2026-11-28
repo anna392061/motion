@@ -72,6 +72,7 @@ if(a.cadenceSeries?.length>1&&(a.type==='run'||a.type==='cycle')){
     isRunning?'步/分钟':'rpm','#a27f5f');
 }
 if(a.powerSeries?.length>1)extras+=graphSVG(a.powerSeries,'POWER · 功率','W','#a67b60');
+if(a.type==='cycle'&&window.MOTIONCycling)extras+=MOTIONCycling.gradeChart(a);
 if(a.type==='cycle'&&a.cal!=null)extras+=`<section class="card p18 section"><div class="micro">ACTIVE CALORIES</div><h2>${Math.round(a.cal)} kcal</h2></section>`;
 if(a.type==='cycle'&&!window.MOTIONCycling&&Number.isFinite(a.power))extras+=`<section class="card p18 section"><div class="micro">AVERAGE POWER</div><h2>${a.power} W</h2></section>`;
 html=html.replace('<div class="card p18 section"><div class="eyebrow">管理这条记录</div>',extras+'<div class="card p18 section"><div class="eyebrow">管理这条记录</div>');return html};

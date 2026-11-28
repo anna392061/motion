@@ -1,4 +1,4 @@
-/* MOTION. cycling analytics — v1.4.9 candidate; independent of running */
+/* MOTION. cycling analytics — v1.4.10; independent of running */
 (function cyclingModule(){
 "use strict";
 const DISTANCES=[5,10,20,30], MAX_GAP=10, MIN_COVERAGE=.95;
@@ -147,7 +147,7 @@ function legacy(a,km){
  if(secs>0)out.push({start,end,seconds:secs,speed:(end-start)*3600/secs});
  return {rows:out,basis:"历史分段时间（可能含暂停）",source:"历史分段",partial:finite(a.distance)&&end<a.distance-.03};
 }
-function results(a,km){return analyze(a.cyclingRaw,km)||legacy(a,km)}
+function results(a,km){return a.cyclingRaw?analyze(a.cyclingRaw,km):legacy(a,km)}
 function timeLabel(s){if(!finite(s)||s<0)return "—";s=Math.round(s);const h=Math.floor(s/3600),m=Math.floor(s%3600/60),ss=String(s%60).padStart(2,"0");return h?`${h}:${String(m).padStart(2,"0")}:${ss}`:`${m}:${ss}`}
 const fmt=(x,d=0)=>finite(x)?x.toFixed(d):"—";
 const labelKm=x=>Number(x.toFixed(2)).toString();
@@ -155,11 +155,11 @@ let selectedKm=5,mode="basic";
 function renderSplits(a){
  const data=results(a,selectedKm);
  const header=`<section class="section cycling-splits" id="cycling-splits"><div class="spread"><h2 class="section-title">分段均速</h2></div><div class="filter-line" style="margin:12px 0;gap:6px;flex-wrap:wrap">${DISTANCES.map(k=>`<button class="pill ${k===selectedKm?"active":""}" onclick="MOTIONCycling.select(${k})" aria-pressed="${k===selectedKm}">${k} km</button>`).join("")}</div><div class="filter-line" style="margin:8px 0;gap:6px"><button class="pill ${mode==="basic"?"active":""}" onclick="MOTIONCycling.view('basic')">基础表现</button><button class="pill ${mode==="training"?"active":""}" onclick="MOTIONCycling.view('training')">训练分析</button></div>`;
- const refresh=!a.cyclingRaw&&String(a.sourceKey||"").startsWith("garmin:")?`<button class="soft-btn" onclick="MOTIONCycling.enrich()" style="margin-top:10px">补全 Garmin FIT 数据</button><p id="cycling-refresh-status" class="helper" aria-live="polite">仅更新本条记录，不新增重复运动。</p>`:"";
+ const status=refreshState.get(a.id),refresh=needsRefresh(a)?`<p id="cycling-refresh-status" class="helper" aria-live="polite">${status==="failed"?"原始数据更新失败。":status==="busy"?"正在自动更新原始数据…":"正在准备原始数据更新…"}</p>${status==="failed"?`<button class="soft-btn" onclick="MOTIONCycling.enrich()" style="margin-top:8px">重试</button>`:""}`:"";
  if(!data?.rows.length)return header+`<div class="card p18"><p class="helper">尚无可用分段数据。</p>${refresh}</div></section>`;
- const training=mode==="training",heads=training?["路段 km","均功率 W","NP W","踏频 rpm","心率 bpm"]:["路段 km","用时","均速 km/h","均功率 W","爬升 m"];
- const rows=data.rows.map(r=>[`${labelKm(r.start)}–${labelKm(r.end)}`,...(training?[fmt(r.power),fmt(r.np),fmt(r.cadence),fmt(r.hr)]:[timeLabel(r.seconds),fmt(r.speed,1),fmt(r.power),fmt(r.gain)])]);
- return header+`<div class="card p18" style="margin-top:12px;overflow-x:auto;padding-inline:12px"><table style="width:100%;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap"><thead><tr>${heads.map(x=>`<th scope="col" style="font-weight:500;padding:10px 3px;text-align:right">${x}</th>`).join("")}</tr></thead><tbody>${rows.map(row=>`<tr style="border-top:1px solid rgba(143,107,97,.16)">${row.map((x,i)=>`<td style="padding:13px 3px;text-align:right;${i===0||i===2&&!training?"font-weight:650;":""}">${x}</td>`).join("")}</tr>`).join("")}</tbody></table><p class="helper" style="margin-top:10px">时间：${data.basis}。${data.partial?"历史数据不完整，仅显示已有分段。":""}${data.source==="FIT"?"分段爬升为海拔平滑估算；踏频仅统计踩踏时段。":"补全 FIT 后可获取分段功率、踏频及爬升。"}${training?" NP 仅在至少10分钟且功率采样充分时计算。":""}</p>${refresh}</div></section>`;
+ const training=mode==="training",heads=training?["路段 km","均功率 W","NP W","踏频 rpm","心率 bpm","爬升 m"]:["路段 km","移动时间","停留","均速 km/h"];
+ const rows=data.rows.map(r=>[`${labelKm(r.start)}–${labelKm(r.end)}`,...(training?[fmt(r.power),fmt(r.np),fmt(r.cadence),fmt(r.hr),fmt(r.gain)]:[timeLabel(data.source==="FIT"?r.seconds:null),timeLabel(r.stopped),fmt(data.source==="FIT"?r.speed:null,1)])]);
+ return header+`<div class="card p18" style="margin-top:12px;overflow-x:auto;padding-inline:12px"><table style="width:100%;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap"><thead><tr>${heads.map(x=>`<th scope="col" style="font-weight:500;padding:10px 3px;text-align:right">${x}</th>`).join("")}</tr></thead><tbody>${rows.map(row=>`<tr style="border-top:1px solid rgba(143,107,97,.16)">${row.map((x,i)=>`<td style="padding:13px 3px;text-align:right;${i===0||i===3&&!training?"font-weight:650;":""}">${x}</td>`).join("")}</tr>`).join("")}</tbody></table><p class="helper" style="margin-top:10px">时间：${data.basis}。${data.partial?"历史数据不完整，仅显示已有分段。":""}${data.source==="FIT"?(training?" 功率含滑行零值，踏频仅计踩踏；NP 至少10分钟且采样充分。爬升为估算。":" 停留含计时暂停与检测到的停车。"):" 旧记录未核实移动时间，自动补全后显示。"}</p>${refresh}</div></section>`;
 }
 function gradeSeries(raw){
  const points=[];
@@ -181,28 +181,37 @@ function gradeChart(a){
  return `<div class="card p18 section metric-chart"><div class="micro">GRADE · 坡度</div><p class="chart-caption">根据海拔与距离估算 · 非瞬时坡度</p><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="骑行坡度与距离曲线"><line x1="${pad}" x2="${W-pad}" y1="${H/2}" y2="${H/2}" stroke="#ead7e1"/><path d="${path}" fill="none" stroke="#9b87b3" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg><div class="chart-labels"><span>0 km · 0% 基准线</span><span>${xmax.toFixed(1)} km</span></div></div>`;
 }
 function summaryFields(a){
- const r=analyze(a.cyclingRaw,5)?.overall;
- const fields=[["平均功率",r?.power??a.cyclingRaw?.power??a.power,"W"],["标准化功率",r?.np??a.cyclingRaw?.np,"W"],["平均踏频",r?.cadence??a.cyclingRaw?.cadence,"rpm"]];
- return fields.filter(x=>finite(x[1])).map(([k,v,u])=>[k,`${fmt(v)} ${u}`]);
+ const data=analyze(a.cyclingRaw,5),r=data?.overall;
+ const fields=[["距离",finite(a.distance)?a.distance.toFixed(2)+" km":"—"],["移动均速",finite(r?.speed)?fmt(r.speed,1)+" km/h":"—"],["移动时间",timeLabel(r?.seconds)],["总耗时",timeLabel(r?.elapsed)],["停留时间",timeLabel(r?.stopped)],["计时时间",timeLabel(r?.timer??a.cyclingRaw?.timer??(finite(a.minutes)?a.minutes*60:null))],["平均功率",finite(r?.power)?fmt(r.power)+" W":"—"],["标准化功率",finite(r?.np)?fmt(r.np)+" W":"—"],["平均踏频",finite(r?.cadence)?fmt(r.cadence)+" rpm":"—"],["平均心率",finite(r?.hr)?fmt(r.hr)+" bpm":"—"],["累计爬升",finite(a.gain)?fmt(a.gain)+" m":"—"],["来源",a.source||"—"]];
+ if(!a.cyclingRaw){fields.push(["设备均速（原始）",finite(a.speed)?fmt(a.speed,1)+" km/h":"—"]);if(finite(a.power))fields.push(["设备平均功率（原始）",fmt(a.power)+" W"])}
+ return fields;
 }
 function replacePanel(){const a=state.manual.find(x=>x.id===state.activityID),panel=document.getElementById("cycling-splits");if(a?.type==="cycle"&&panel)panel.outerHTML=renderSplits(a)}
 function select(k){if(DISTANCES.includes(k)){selectedKm=k;replacePanel()}}
 function view(v){if(["basic","training"].includes(v)){mode=v;replacePanel()}}
-let busy=false;
-async function enrich(){
- if(busy)return;const a=state.manual.find(x=>x.id===state.activityID);
- if(a?.type!=="cycle"||!String(a.sourceKey||"").startsWith("garmin:"))return;
- busy=true;const status=document.getElementById("cycling-refresh-status");if(status)status.textContent="正在读取原始 FIT…";
+const refreshState=new Map();
+function needsRefresh(a){return a?.type==="cycle"&&(!a.cyclingRaw?.samples?.length&&String(a.sourceKey||"").startsWith("garmin:")||a.cyclingRaw?.version===1&&!!a.cyclingRaw.fitBase64)}
+async function enrich(id=state.activityID,automatic=false){
+ const a=state.manual.find(x=>x.id===id);
+ if(!needsRefresh(a)||refreshState.get(id)==="busy"||(automatic&&refreshState.get(id)==="failed"))return;
+ refreshState.set(id,"busy");if(state.activityID===id&&state.overlay==="activity")replacePanel();
  try{
-  const copy={...a};await importGarminCandidate(copy,String(a.sourceKey).slice(7));
-  if(!copy.cyclingRaw?.samples?.length)throw Error("FIT 中没有可用的骑行记录");
-  // Only patch the selected activity; never overwrite user-entered metadata.
-  for(const k of ["cyclingRaw","power","cadenceSeries","powerSeries","speedSeries","distanceTimeSeries","routeTimedPoints","routePoints","altitudeSeries","hrSeries","splits","fitChecked","fitDecoder","distance","minutes","speed","duration","gain","cal","hr"])if(copy[k]!=null)a[k]=copy[k];
-  await storeActivity(a);if(state.activityID===a.id&&state.overlay==="activity")showOverlay();toast("骑行 FIT 数据已补全");
- }catch(e){const s=document.getElementById("cycling-refresh-status");if(s)s.textContent="补全失败："+e.message;toast("补全失败，请检查 Garmin 连接")}
- finally{busy=false}
+  const copy={...a};
+  if(a.cyclingRaw?.fitBase64){const binary=atob(a.cyclingRaw.fitBase64),bytes=Uint8Array.from(binary,c=>c.charCodeAt(0));const full=await parseGarminFull(bytes.buffer,"cycle");Object.assign(copy,full)}
+  else await importGarminCandidate(copy,String(a.sourceKey).slice(7));
+  if(!copy.cyclingRaw?.samples?.length||copy.cyclingRaw.version!==2)throw Error("原始数据未成功解析");
+  if(!state.manual.includes(a)||a.type!=="cycle")return;
+  // Save a new object first, then update the visible record; never overwrite title, notes or equipment.
+  const next={...a};
+  for(const k of ["cyclingRaw","power","cadenceSeries","powerSeries","speedSeries","distanceTimeSeries","routeTimedPoints","routePoints","altitudeSeries","hrSeries","splits","fitChecked","fitDecoder","distance","gain","cal","hr"])if(copy[k]!=null)next[k]=copy[k];
+  await storeActivity(next);
+  if(!state.manual.includes(a)||a.type!=="cycle")return;
+  Object.assign(a,next);refreshState.delete(id);
+  if(state.activityID===id&&state.overlay==="activity"){const old=document.querySelector(".overlay")?.scrollTop||0;showOverlay();const overlay=document.querySelector(".overlay");if(overlay)overlay.scrollTop=old}
+ }catch(e){refreshState.set(id,"failed");if(state.activityID===id&&state.overlay==="activity")replacePanel();console.warn("Cycling FIT refresh failed",e)}
+ finally{if(refreshState.get(id)==="busy")refreshState.delete(id)}
 }
-const api={DISTANCES,eventAction,timerEvents,fromDecoded,archiveFit,analyze,legacy,results,summaryFields,gradeSeries,gradeChart,renderSplits,select,view,enrich,timeLabel};
-if(typeof window!=="undefined"){window.MOTIONCycling=api;if(typeof openActivity==="function"){const previous=openActivity;openActivity=function(id){selectedKm=5;mode="basic";return previous(id)}}}
+const api={DISTANCES,eventAction,timerEvents,fromDecoded,archiveFit,analyze,legacy,results,summaryFields,gradeSeries,gradeChart,renderSplits,select,view,enrich,needsRefresh,timeLabel};
+if(typeof window!=="undefined"){window.MOTIONCycling=api;if(typeof openActivity==="function"){const previous=openActivity;openActivity=function(id){selectedKm=5;mode="basic";const result=previous(id);const a=state.manual.find(x=>x.id===id);if(needsRefresh(a))void enrich(id,true);return result}}}
 return api;
 })();

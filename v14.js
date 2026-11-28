@@ -55,7 +55,7 @@ const activityBeforeV14=activityOverlay;
 activityOverlay=function(){let html=activityBeforeV14();const a=state.manual.find(x=>x.id===state.activityID);if(!a)return html;let extras='';
 if(a.type==='run')extras+=shoePickerForActivity(a);
 if(a.type==='run'&&a.paceSeries?.length>1)extras+=motionPaceGraph(a.paceSeries);
-if(a.type==='cycle'&&a.speedSeries?.length>1)extras+=graphSVG(a.speedSeries.map(p=>[p[0],p[1]*3.6]),'SPEED · 速度','km/h','#c57741');
+if(a.type==='cycle'&&a.speedSeries?.length>1)extras+=(window.MOTIONCycling?MOTIONCycling.rawChart:graphSVG)(a.speedSeries.map(p=>[p[0],p[1]*3.6]),'SPEED · 速度','km/h','#c57741');
 if(a.cadenceSeries?.length>1&&(a.type==='run'||a.type==='cycle')){
   // FIT / Intervals cadence can be strides/min or steps/min; normalize for display.
   // Conversion is display-only; never modify stored cadenceSeries or backups.
@@ -67,11 +67,11 @@ if(a.cadenceSeries?.length>1&&(a.type==='run'||a.type==='cycle')){
   const median=cadenceSamples.length?cadenceSamples[Math.floor(cadenceSamples.length/2)]:0;
   const runScale=isRunning&&median>0&&median<125?2:1;
   const cadencePoints=isRunning?a.cadenceSeries.map(p=>[p[0],p[1]*runScale]):a.cadenceSeries;
-  extras+=graphSVG(cadencePoints,
+  extras+=(!isRunning&&window.MOTIONCycling?MOTIONCycling.rawChart:graphSVG)(cadencePoints,
     isRunning?'RUNNING CADENCE · 步频':'CYCLING CADENCE · 踏频',
     isRunning?'步/分钟':'rpm','#a27f5f');
 }
-if(a.powerSeries?.length>1)extras+=graphSVG(a.powerSeries,'POWER · 功率','W','#a67b60');
+if(a.powerSeries?.length>1)extras+=(a.type==='cycle'&&window.MOTIONCycling?MOTIONCycling.rawChart:graphSVG)(a.powerSeries,'POWER · 功率','W','#a67b60');
 if(a.type==='cycle'&&window.MOTIONCycling)extras+=MOTIONCycling.gradeChart(a);
 if(a.type==='cycle'&&a.cal!=null)extras+=`<section class="card p18 section"><div class="micro">ACTIVE CALORIES</div><h2>${Math.round(a.cal)} kcal</h2></section>`;
 if(a.type==='cycle'&&!window.MOTIONCycling&&Number.isFinite(a.power))extras+=`<section class="card p18 section"><div class="micro">AVERAGE POWER</div><h2>${a.power} W</h2></section>`;

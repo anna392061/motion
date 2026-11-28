@@ -62,7 +62,7 @@ function analyze(raw,km){
  const events=(raw.events||[]).filter(e=>finite(e.t)&&["start","stop"].includes(e.action)).sort((a,b)=>a.t-b.t);
  const buckets=Array.from({length:Math.ceil(total/km-1e-10)},(_,i)=>newBucket(i*km,Math.min(total,(i+1)*km)));
  const overall=newBucket(0,total);
- let active=true,eidx=0,wasMoving=false,negativeDistance=false,irregular=false,activeTime=0;
+ let active=true,eidx=0,wasMoving=false,negativeDistance=false,activeTime=0;
  const alt=rows.map((r,i)=>{const a=rows.slice(Math.max(0,i-2),i+3).map(x=>x[6]).filter(finite).sort((x,y)=>x-y);return finite(r[6])&&a.length?a[Math.floor(a.length/2)]:null});
  let anchor=alt[0];
  const at=d=>buckets[Math.max(0,Math.min(buckets.length-1,Math.floor((d+1e-9)/km)))];
@@ -83,7 +83,7 @@ function analyze(raw,km){
   // Distance belongs to active spans only. A paused gap must not dilute speed or create artificial zero power.
   // If a gap spans a pause, location and sensor values within the active edge cannot be reconstructed exactly.
   const hasPause=paused>1e-7;
-  const stationary=live>0&&dm/live<=.2&&(!finite(a[2])||a[2]<=.5)&&(!finite(b[2])||b[2]<=.5);
+  const stationary=live>0&&dm/live<=.2&&(!finite(a[2])||a[2]<=.5||!finite(b[2])||b[2]<=.5);
   const noDistance=live>0&&dm<=.01;
   const uncertain=(live>MAX_GAP)||(live<=1e-7&&dm>.01)||(live>0&&dm/live>45)||(noDistance&&!stationary);
   let d=d0;
@@ -105,8 +105,7 @@ function analyze(raw,km){
     if(unknown){charge(bucket,"unknown",sec);wasMoving=false;continue}
     // A gap crossing pause cannot carry sensor measurements across the event.
     const valid=!hasPause&&dt<=MAX_GAP;
-    if(dt>2||hasPause)irregular=true;
-    for(const target of [bucket,overall])addPiece(target,sec,a[3],a[4],a[5],finite(gain)?gain*(sec/p.dt):null,!wasMoving||target.pieces.length===0,valid);
+    for(const target of [bucket,overall]){if(dt>2||hasPause)target.npSparse=true;addPiece(target,sec,a[3],a[4],a[5],finite(gain)?gain*(sec/p.dt):null,!wasMoving||target.pieces.length===0,valid)}
     wasMoving=true;
    }
    d=end;
@@ -120,16 +119,16 @@ function analyze(raw,km){
  const distanceMismatch=finite(sessionDistance)&&Math.abs(total-sessionDistance)>Math.max(.05,sessionDistance*.005);
  const edgeElapsed=finite(raw.elapsed)&&raw.elapsed>=elapsed-2?Math.max(elapsed,raw.elapsed):elapsed;
  const unobserved=Math.max(0,edgeElapsed-elapsed);
- const reliable=reliableTimer&&!distanceMismatch&&unobserved<=3;
+ const reliable=reliableTimer&&!distanceMismatch;
  const complete=b=>reliable&&!b.badDistance&&!(b.unknown>1e-6)&&!(b.unknownDistance>1e-6);
  const finishBucket=b=>{
-  const ok=complete(b),r=finish(b,ok&&!irregular);
+  const ok=complete(b),r=finish(b,ok&&!b.npSparse);
   return {...r,seconds:ok?b.seconds:null,speed:ok?r.speed:null,power:ok?r.power:null,np:ok?r.np:null,cadence:ok?r.cadence:null,hr:ok?r.hr:null,gain:ok?r.gain:null,
-   stopped:(b.paused||0)+(b.stopped||0),unknown:b.unknown||0,paused:b.paused||0,stationary:b.stopped||0,elapsed:b.seconds+(b.paused||0)+(b.stopped||0)+(b.unknown||0),complete:ok};
+   stopped:ok?(b.paused||0)+(b.stopped||0):null,unknown:b.unknown||0,paused:b.paused||0,stationary:b.stopped||0,elapsed:b.seconds+(b.paused||0)+(b.stopped||0)+(b.unknown||0),complete:ok};
  };
  const result=finishBucket(overall),out=buckets.map(finishBucket);
  result.elapsed=edgeElapsed;result.timer=finite(raw.timer)?raw.timer:reliableTimer?activeTime:null;
- result.stopped=complete(overall)?result.stopped:null;
+ result.stopped=complete(overall)&&unobserved<=3?result.stopped:null;
  const sum=key=>out.reduce((s,r)=>s+(r[key]||0),0);
  const checks={distance:Math.abs(out.reduce((s,r)=>s+r.end-r.start,0)-total)<1e-6,time:Math.abs(sum("elapsed")-elapsed)<.01,timer:reliableTimer,distanceMatchesSession:!distanceMismatch,unobservedSeconds:unobserved,unknownSeconds:overall.unknown||0};
  if(!checks.time||!checks.distance){for(const r of [...out,result]){r.seconds=r.speed=r.power=r.np=r.cadence=r.hr=null;r.complete=false}}

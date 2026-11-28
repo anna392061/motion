@@ -182,8 +182,8 @@ function gradeChart(a){
 }
 function summaryFields(a){
  const data=analyze(a.cyclingRaw,5),r=data?.overall;
- const fields=[["距离",finite(a.distance)?a.distance.toFixed(2)+" km":"—"],["移动均速",finite(r?.speed)?fmt(r.speed,1)+" km/h":"—"],["移动时间",timeLabel(r?.seconds)],["总耗时",timeLabel(r?.elapsed)],["停留时间",timeLabel(r?.stopped)],["计时时间",timeLabel(r?.timer??a.cyclingRaw?.timer??(finite(a.minutes)?a.minutes*60:null))],["平均功率",finite(r?.power)?fmt(r.power)+" W":"—"],["标准化功率",finite(r?.np)?fmt(r.np)+" W":"—"],["平均踏频",finite(r?.cadence)?fmt(r.cadence)+" rpm":"—"],["平均心率",finite(r?.hr)?fmt(r.hr)+" bpm":"—"],["累计爬升",finite(a.gain)?fmt(a.gain)+" m":"—"],["来源",a.source||"—"]];
- if(!a.cyclingRaw){fields.push(["设备均速（原始）",finite(a.speed)?fmt(a.speed,1)+" km/h":"—"]);if(finite(a.power))fields.push(["设备平均功率（原始）",fmt(a.power)+" W"])}
+ const fields=[["距离",finite(a.distance)?a.distance.toFixed(2)+" km":"—"],["移动均速",finite(r?.speed)?fmt(r.speed,1)+" km/h":"—"],["移动时间",timeLabel(r?.seconds)],[finite(a.cyclingRaw?.elapsed)?"总耗时":"记录跨度（估算）",timeLabel(r?.elapsed)],["停留时间",timeLabel(r?.stopped)],["计时时间",timeLabel(r?.timer??a.cyclingRaw?.timer??(finite(a.minutes)?a.minutes*60:null))],["平均功率",finite(r?.power)?fmt(r.power)+" W":"—"],["标准化功率",finite(r?.np)?fmt(r.np)+" W":"—"],["平均踏频",finite(r?.cadence)?fmt(r.cadence)+" rpm":"—"],["平均心率",finite(r?.hr)?fmt(r.hr)+" bpm":"—"],["累计爬升",finite(a.gain)?fmt(a.gain)+" m":"—"],["来源",a.source||"—"]];
+ if(!finite(r?.speed)&&finite(a.speed))fields.push(["设备均速（原始）",fmt(a.speed,1)+" km/h"]);if(!finite(r?.power)&&finite(a.cyclingRaw?.power??a.power))fields.push(["设备平均功率（原始）",fmt(a.cyclingRaw?.power??a.power)+" W"]);if(!finite(r?.np)&&finite(a.cyclingRaw?.np))fields.push(["设备 NP（原始）",fmt(a.cyclingRaw.np)+" W"]);
  return fields;
 }
 function replacePanel(){const a=state.manual.find(x=>x.id===state.activityID),panel=document.getElementById("cycling-splits");if(a?.type==="cycle"&&panel)panel.outerHTML=renderSplits(a)}
@@ -204,14 +204,16 @@ async function enrich(id=state.activityID,automatic=false){
   // Save a new object first, then update the visible record; never overwrite title, notes or equipment.
   const next={...a};
   for(const k of ["cyclingRaw","power","cadenceSeries","powerSeries","speedSeries","distanceTimeSeries","routeTimedPoints","routePoints","altitudeSeries","hrSeries","splits","fitChecked","fitDecoder","distance","gain","cal","hr"])if(copy[k]!=null)next[k]=copy[k];
-  await storeActivity(next);
+  const previous={...a};Object.assign(a,next);
+  try{await storeActivity(a)}catch(e){for(const k of Object.keys(a))if(!(k in previous))delete a[k];Object.assign(a,previous);throw e}
   if(!state.manual.includes(a)||a.type!=="cycle")return;
-  Object.assign(a,next);refreshState.delete(id);
+  refreshState.delete(id);
   if(state.activityID===id&&state.overlay==="activity"){const old=document.querySelector(".overlay")?.scrollTop||0;showOverlay();const overlay=document.querySelector(".overlay");if(overlay)overlay.scrollTop=old}
  }catch(e){refreshState.set(id,"failed");if(state.activityID===id&&state.overlay==="activity")replacePanel();console.warn("Cycling FIT refresh failed",e)}
  finally{if(refreshState.get(id)==="busy")refreshState.delete(id)}
 }
-const api={DISTANCES,eventAction,timerEvents,fromDecoded,archiveFit,analyze,legacy,results,summaryFields,gradeSeries,gradeChart,renderSplits,select,view,enrich,needsRefresh,timeLabel};
+function rawChart(...args){return graphSVG(...args).replace(/平均 [^·]* · /,"原始采样 · ")}
+const api={rawChart,DISTANCES,eventAction,timerEvents,fromDecoded,archiveFit,analyze,legacy,results,summaryFields,gradeSeries,gradeChart,renderSplits,select,view,enrich,needsRefresh,timeLabel};
 if(typeof window!=="undefined"){window.MOTIONCycling=api;if(typeof openActivity==="function"){const previous=openActivity;openActivity=function(id){selectedKm=5;mode="basic";const result=previous(id);const a=state.manual.find(x=>x.id===id);if(needsRefresh(a))void enrich(id,true);return result}}}
 return api;
 })();

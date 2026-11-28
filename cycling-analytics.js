@@ -1,4 +1,4 @@
-/* MOTION. cycling analytics — v1.4.10; independent of running */
+/* MOTION. cycling analytics — v1.4.11; independent of running */
 (function cyclingModule(){
 "use strict";
 const DISTANCES=[5,10,20,30], MAX_GAP=10, MIN_COVERAGE=.95;
@@ -57,82 +57,109 @@ function analyze(raw,km){
  if(!raw||!DISTANCES.includes(km))return null;
  const rows=(raw.samples||[]).filter(r=>finite(r[0])&&finite(r[1])).sort((a,b)=>a[0]-b[0]);
  if(rows.length<2)return null;
- const first=rows[0],last=rows.at(-1),total=(last[1]-first[1])/1000,elapsed=last[0]-first[0];
- if(total<=0||elapsed<=0||total>2000)return null;
+ const first=rows[0],last=rows.at(-1),recordElapsed=last[0]-first[0],rawDistance=(last[1]-first[1])/1000;
+ if(rawDistance<=0||recordElapsed<=0||rawDistance>2000)return null;
  const events=(raw.events||[]).filter(e=>finite(e.t)&&["start","stop"].includes(e.action)).sort((a,b)=>a.t-b.t);
- const buckets=Array.from({length:Math.ceil(total/km-1e-10)},(_,i)=>newBucket(i*km,Math.min(total,(i+1)*km)));
- const overall=newBucket(0,total);
- let active=true,eidx=0,wasMoving=false,negativeDistance=false,activeTime=0;
+ let active=true,eidx=0,activeTime=0,pausedTime=0,stationaryTime=0,unknownTime=0,excludedDistance=0,negativeDistance=false,moveDistance=0;
+ const intervals=[];
  const alt=rows.map((r,i)=>{const a=rows.slice(Math.max(0,i-2),i+3).map(x=>x[6]).filter(finite).sort((x,y)=>x-y);return finite(r[6])&&a.length?a[Math.floor(a.length/2)]:null});
- let anchor=alt[0];
- const at=d=>buckets[Math.max(0,Math.min(buckets.length-1,Math.floor((d+1e-9)/km)))];
- function charge(bucket,key,dt){bucket[key]=(bucket[key]||0)+dt;overall[key]=(overall[key]||0)+dt}
+ let anchor=alt[0],breakBefore=true;
  while(eidx<events.length&&events[eidx].t<=first[0])active=events[eidx++].action==="start";
  for(let i=1;i<rows.length;i++){
-  const a=rows[i-1],b=rows[i],dt=b[0]-a[0],d0=(a[1]-first[1])/1000,d1=(b[1]-first[1])/1000,dm=(d1-d0)*1000;
-  if(dt<=0){if(dm!==0)negativeDistance=true;continue}
+  const a=rows[i-1],b=rows[i],dt=b[0]-a[0],dm=b[1]-a[1];
+  if(dt<=0){if(Math.abs(dm)>.01)negativeDistance=true;continue}
   if(dm<-.01){negativeDistance=true;continue}
-  const slices=[];let cursor=a[0];
+  const meters=Math.max(0,dm);let cursor=a[0],live=0;
   while(eidx<events.length&&events[eidx].t<=cursor)active=events[eidx++].action==="start";
   while(eidx<events.length&&events[eidx].t<b[0]){
-   const ev=events[eidx++];if(ev.t>cursor)slices.push({dt:ev.t-cursor,active});cursor=ev.t;active=ev.action==="start";
+   const ev=events[eidx++];if(active)live+=ev.t-cursor;cursor=ev.t;active=ev.action==="start";
   }
-  if(b[0]>cursor)slices.push({dt:b[0]-cursor,active});
-  const live=slices.reduce((s,p)=>s+(p.active?p.dt:0),0),paused=dt-live;
-  activeTime+=live;
-  // Distance belongs to active spans only. A paused gap must not dilute speed or create artificial zero power.
-  // If a gap spans a pause, location and sensor values within the active edge cannot be reconstructed exactly.
-  const hasPause=paused>1e-7;
-  const stationary=live>0&&dm/live<=.2&&(!finite(a[2])||a[2]<=.5||!finite(b[2])||b[2]<=.5);
-  const noDistance=live>0&&dm<=.01;
-  const uncertain=(live>MAX_GAP)||(live<=1e-7&&dm>.01)||(live>0&&dm/live>45)||(noDistance&&!stationary);
-  let d=d0;
-  if(live<=1e-7&&dm>.01){charge(at(d),"unknownDistance",dm);for(const bucket of buckets)if(bucket.start<d1&&bucket.end>d0)bucket.badDistance=true;overall.badDistance=true}
-  for(const p of slices){
-   if(!p.active){charge(at(d),"paused",p.dt);wasMoving=false;anchor=null;continue}
-   const end=d+(live>0?(d1-d0)*p.dt/live:0);
-   const stop=stationary&&!uncertain,unknown=uncertain;
-   let gain=null;
-   if(!stop&&!unknown&&!hasPause&&finite(alt[i])&&finite(anchor)){const diff=alt[i]-anchor;gain=0;if(diff>=3){gain=diff;anchor=alt[i]}else if(diff<=-3)anchor=alt[i]}
-   if(!finite(anchor)||stop||unknown||hasPause)anchor=alt[i];
-   const cuts=[d,end];if(end>d)for(let mark=(Math.floor(d/km)+1)*km;mark<end-1e-10;mark+=km)cuts.push(mark);
-   cuts.sort((x,y)=>x-y);
-   for(let j=1;j<cuts.length;j++){
-    const lo=cuts[j-1],hi=cuts[j],sec=end>d?p.dt*(hi-lo)/(end-d):p.dt;
-    if(sec<=0)continue;
-    const bucket=at((lo+hi)/2);
-    if(stop){charge(bucket,"stopped",sec);wasMoving=false;continue}
-    if(unknown){charge(bucket,"unknown",sec);wasMoving=false;continue}
-    // A gap crossing pause cannot carry sensor measurements across the event.
-    const valid=!hasPause&&dt<=MAX_GAP;
-    for(const target of [bucket,overall]){if(dt>2||hasPause)target.npSparse=true;addPiece(target,sec,a[3],a[4],a[5],finite(gain)?gain*(sec/p.dt):null,!wasMoving||target.pieces.length===0,valid)}
-    wasMoving=true;
+  if(active)live+=b[0]-cursor;
+  const paused=Math.max(0,dt-live);activeTime+=live;pausedTime+=paused;
+  if(live<=1e-8){excludedDistance+=meters;breakBefore=true;anchor=null;continue}
+  const speeds=[a[2],b[2]].filter(v=>finite(v)&&v>=0&&v<=45);
+  const bothMoving=speeds.length===2&&speeds.every(v=>v>.5);
+  const stoppedEvidence=!bothMoving&&(!speeds.length||speeds.some(v=>v<=.5));
+  // Distance is authoritative for stationary detection, except very short samples
+  // with a moving speed sensor (distance may be quantized).
+  const stationary=meters<=.01&&!bothMoving||meters/live<=.2&&stoppedEvidence;
+  if(stationary){stationaryTime+=live;excludedDistance+=meters;breakBefore=true;anchor=null;continue}
+  const implied=meters/live;
+  let moving=live,estimated=false,unknown=false;
+  if(meters<=.01){
+   if(live<=2&&bothMoving){estimated=true}
+   else{unknown=true;moving=0}
+  }else if(implied>45){unknown=true}
+  else if(live>MAX_GAP){
+   // Smart recording can have sparse time stamps. Use active time as an
+   // estimate for short gaps; for longer gaps require speed evidence.
+   estimated=true;
+   if(live>30){
+    const v=speeds.length===2?(speeds[0]+speeds[1])/2:null;
+    if(bothMoving&&v>0&&implied<=v*2&&implied>=v*.25){moving=Math.min(live,meters/v)}
+    else unknown=true;
    }
-   d=end;
+  }
+  if(paused>1e-7)estimated=true;
+  if(unknown){unknownTime+=live;moving=meters>.01?live:0}
+  // Any non-moving remainder from an inferred long gap is unobserved,
+  // not a confirmed stop. Keep it in the uncertainty budget.
+  const unresolved=unknown?live:Math.max(0,live-moving);
+  if(!unknown&&unresolved>0)unknownTime+=unresolved;
+  let gain=null;
+  if(!unknown&&paused<=1e-7&&dt<=MAX_GAP&&finite(alt[i])&&finite(anchor)){
+   const diff=alt[i]-anchor;gain=0;if(diff>=3){gain=diff;anchor=alt[i]}else if(diff<=-3)anchor=alt[i];
+  }
+  if(!finite(anchor)||unknown||paused>1e-7||dt>MAX_GAP)anchor=alt[i];
+  const start=moveDistance;moveDistance+=meters/1000;
+  intervals.push({start,end:moveDistance,moving,live,uncertainty:unresolved,estimated:estimated||unknown,unknown,p:a[3],c:a[4],h:a[5],gain,valid:!unknown&&paused<=1e-7&&dt<=MAX_GAP,npSparse:unknown||paused>1e-7||dt>2,breakBefore:breakBefore||paused>1e-7||unknown});
+  breakBefore=unknown||paused>1e-7;
+ }
+ if(negativeDistance||moveDistance<=0)return null;
+ const total=moveDistance;
+ const buckets=Array.from({length:Math.ceil(total/km-1e-9)},(_,i)=>newBucket(i*km,Math.min(total,(i+1)*km)));
+ const overall=newBucket(0,total);
+ const at=d=>buckets[Math.max(0,Math.min(buckets.length-1,Math.floor((d+1e-9)/km)))];
+ for(const q of intervals){
+  const span=q.end-q.start,cuts=[q.start,q.end];
+  if(span>0)for(let mark=(Math.floor((q.start+1e-9)/km)+1)*km;mark<q.end-1e-9;mark+=km)cuts.push(mark);
+  cuts.sort((x,y)=>x-y);
+  for(let j=1;j<cuts.length;j++){
+   const lo=cuts[j-1],hi=cuts[j],ratio=span>0?(hi-lo)/span:1;
+   if(ratio<=0)continue;
+   const bucket=at((lo+hi)/2);
+   for(const target of [bucket,overall]){
+    target.active=(target.active||0)+q.live*ratio;
+    target.uncertainty=(target.uncertainty||0)+q.uncertainty*ratio;
+    target.estimated=target.estimated||q.estimated;
+    target.npSparse=target.npSparse||q.npSparse;
+    addPiece(target,q.moving*ratio,q.p,q.c,q.h,finite(q.gain)?q.gain*ratio:null,q.breakBefore&&j===1||target.pieces.length===0,q.valid);
+   }
   }
  }
- if(negativeDistance)return null;
+ const timerKnown=events.length>0||finite(raw.timer)&&Math.abs(raw.timer-recordElapsed)<=2;
  const timerMismatch=finite(raw.timer)&&Math.abs(activeTime-raw.timer)>Math.max(3,raw.timer*.01);
- const timerKnown=events.length>0||finite(raw.timer)&&Math.abs(raw.timer-elapsed)<=2;
- const reliableTimer=timerKnown&&!timerMismatch&&!overall.badDistance;
+ const reliableTimer=timerKnown&&!timerMismatch;
  const sessionDistance=finite(raw.distance)?raw.distance/1000:null;
- const distanceMismatch=finite(sessionDistance)&&Math.abs(total-sessionDistance)>Math.max(.05,sessionDistance*.005);
- const edgeElapsed=finite(raw.elapsed)&&raw.elapsed>=elapsed-2?Math.max(elapsed,raw.elapsed):elapsed;
- const unobserved=Math.max(0,edgeElapsed-elapsed);
- const reliable=reliableTimer&&!distanceMismatch;
- const complete=b=>reliable&&!b.badDistance&&!(b.unknown>1e-6)&&!(b.unknownDistance>1e-6);
- const finishBucket=b=>{
-  const ok=complete(b),r=finish(b,ok&&!b.npSparse);
-  return {...r,seconds:ok?b.seconds:null,speed:ok?r.speed:null,power:ok?r.power:null,np:ok?r.np:null,cadence:ok?r.cadence:null,hr:ok?r.hr:null,gain:ok?r.gain:null,
-   stopped:ok?(b.paused||0)+(b.stopped||0):null,unknown:b.unknown||0,paused:b.paused||0,stationary:b.stopped||0,elapsed:b.seconds+(b.paused||0)+(b.stopped||0)+(b.unknown||0),complete:ok};
- };
+ const distanceMismatch=finite(sessionDistance)&&Math.abs(rawDistance-sessionDistance)>Math.max(.05,sessionDistance*.005);
+ const edgeElapsed=finite(raw.elapsed)&&raw.elapsed>=recordElapsed-2?Math.max(recordElapsed,raw.elapsed):recordElapsed;
+ const unobserved=Math.max(0,edgeElapsed-recordElapsed);
+ function finishBucket(b){
+  const uncertainty=b.uncertainty||0,activeSeconds=b.active||0;
+  // Small unknown intervals may yield an explicitly approximate result.
+  // Do not suppress an entire 20 km segment for a one-second ambiguity.
+  const ok=reliableTimer&&!distanceMismatch&&b.seconds>0&&uncertainty<=Math.max(10,activeSeconds*.05);
+  const r=finish(b,ok&&!b.npSparse);
+  return {...r,seconds:ok?b.seconds:null,speed:ok?r.speed:null,power:ok?r.power:null,np:ok?r.np:null,cadence:ok?r.cadence:null,hr:ok?r.hr:null,gain:ok?r.gain:null,estimated:ok&&(!!b.estimated||uncertainty>0),unknown:uncertainty,complete:ok,active:activeSeconds,elapsed:activeSeconds};
+ }
  const result=finishBucket(overall),out=buckets.map(finishBucket);
  result.elapsed=edgeElapsed;result.timer=finite(raw.timer)?raw.timer:reliableTimer?activeTime:null;
- result.stopped=complete(overall)&&unobserved<=3?result.stopped:null;
+ result.stopped=reliableTimer&&unobserved<=3?pausedTime+stationaryTime:null;
+ result.paused=pausedTime;result.stationary=stationaryTime;
  const sum=key=>out.reduce((s,r)=>s+(r[key]||0),0);
- const checks={distance:Math.abs(out.reduce((s,r)=>s+r.end-r.start,0)-total)<1e-6,time:Math.abs(sum("elapsed")-elapsed)<.01,timer:reliableTimer,distanceMatchesSession:!distanceMismatch,unobservedSeconds:unobserved,unknownSeconds:overall.unknown||0};
+ const checks={distance:Math.abs(out.reduce((s,r)=>s+r.end-r.start,0)-total)<1e-6,time:Math.abs(sum("active")+pausedTime+stationaryTime-recordElapsed)<.01,timer:reliableTimer,distanceMatchesSession:!distanceMismatch,unobservedSeconds:unobserved,unknownSeconds:unknownTime,excludedDistanceMeters:excludedDistance};
  if(!checks.time||!checks.distance){for(const r of [...out,result]){r.seconds=r.speed=r.power=r.np=r.cadence=r.hr=null;r.complete=false}}
- return {rows:out,overall:result,basis:result.complete?"移动时间（排除计时暂停与检测到的停车）":"移动时间无法完整核实，受影响指标不显示",reliableTimer,estimated:true,source:"FIT",checks};
+ return {rows:out,overall:result,basis:!result.complete?"部分移动时间无法核实；仅显示可计算的路段":out.some(r=>r.estimated)||result.estimated?"排除停车与暂停；≈ 表示采样间隔估算":"仅按移动距离与移动时间计算",reliableTimer,estimated:out.some(r=>r.estimated)||result.estimated,source:"FIT",checks};
 }
 function legacy(a,km){
  const splits=a.splits||[];if(!splits.length)return null;
@@ -157,9 +184,9 @@ function renderSplits(a){
  const header=`<section class="section cycling-splits" id="cycling-splits"><div class="spread"><h2 class="section-title">分段均速</h2></div><div class="filter-line" style="margin:12px 0;gap:6px;flex-wrap:wrap">${DISTANCES.map(k=>`<button class="pill ${k===selectedKm?"active":""}" onclick="MOTIONCycling.select(${k})" aria-pressed="${k===selectedKm}">${k} km</button>`).join("")}</div><div class="filter-line" style="margin:8px 0;gap:6px"><button class="pill ${mode==="basic"?"active":""}" onclick="MOTIONCycling.view('basic')">基础表现</button><button class="pill ${mode==="training"?"active":""}" onclick="MOTIONCycling.view('training')">训练分析</button></div>`;
  const status=refreshState.get(a.id),refresh=needsRefresh(a)?`<p id="cycling-refresh-status" class="helper" aria-live="polite">${status==="failed"?"原始数据更新失败。":status==="busy"?"正在自动更新原始数据…":"正在准备原始数据更新…"}</p>${status==="failed"?`<button class="soft-btn" onclick="MOTIONCycling.enrich()" style="margin-top:8px">重试</button>`:""}`:"";
  if(!data?.rows.length)return header+`<div class="card p18"><p class="helper">尚无可用分段数据。</p>${refresh}</div></section>`;
- const training=mode==="training",heads=training?["路段 km","均功率 W","NP W","踏频 rpm","心率 bpm","爬升 m"]:(data.source==="FIT"?["路段 km","移动时间","停留","均速 km/h"]:["路段 km","历史用时","停留","历史均速 km/h"]);
- const rows=data.rows.map(r=>[`${labelKm(r.start)}–${labelKm(r.end)}`,...(training?[fmt(r.power),fmt(r.np),fmt(r.cadence),fmt(r.hr),fmt(r.gain)]:[timeLabel(r.seconds),timeLabel(r.stopped),fmt(r.speed,1)])]);
- return header+`<div class="card p18" style="margin-top:12px;overflow-x:auto;padding-inline:12px"><table style="width:100%;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap"><thead><tr>${heads.map(x=>`<th scope="col" style="font-weight:500;padding:10px 3px;text-align:right">${x}</th>`).join("")}</tr></thead><tbody>${rows.map(row=>`<tr style="border-top:1px solid rgba(143,107,97,.16)">${row.map((x,i)=>`<td style="padding:13px 3px;text-align:right;${i===0||i===3&&!training?"font-weight:650;":""}">${x}</td>`).join("")}</tr>`).join("")}</tbody></table><p class="helper" style="margin-top:10px">时间：${data.basis}。${data.partial?"历史数据不完整，仅显示已有分段。":""}${data.source==="FIT"?(training?" 功率含滑行零值，踏频仅计踩踏；NP 至少10分钟且采样充分。爬升为估算。":" 停留含计时暂停与检测到的停车。"):" 旧记录仅展示历史计算值，不等同移动均速。"}</p>${refresh}</div></section>`;
+ const training=mode==="training",heads=training?["路段 km","均功率 W","NP W","踏频 rpm","心率 bpm","爬升 m"]:(data.source==="FIT"?["路段 km","移动时间","均速 km/h"]:["路段 km","历史用时","历史均速 km/h"]);
+ const rows=data.rows.map(r=>[`${labelKm(r.start)}–${labelKm(r.end)}`,...(training?[fmt(r.power),fmt(r.np),fmt(r.cadence),fmt(r.hr),fmt(r.gain)]:[`${r.estimated&&finite(r.seconds)?"≈":""}${timeLabel(r.seconds)}`,`${r.estimated&&finite(r.speed)?"≈":""}${fmt(r.speed,1)}`])]);
+ return header+`<div class="card p18" style="margin-top:12px;overflow-x:auto;padding-inline:12px"><table style="width:100%;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap"><thead><tr>${heads.map(x=>`<th scope="col" style="font-weight:500;padding:10px 3px;text-align:right">${x}</th>`).join("")}</tr></thead><tbody>${rows.map(row=>`<tr style="border-top:1px solid rgba(143,107,97,.16)">${row.map((x,i)=>`<td style="padding:13px 3px;text-align:right;${i===0||i===2&&!training?"font-weight:650;":""}">${x}</td>`).join("")}</tr>`).join("")}</tbody></table><p class="helper" style="margin-top:10px">时间：${data.basis}。${data.partial?"历史数据不完整，仅显示已有分段。":""}${data.source==="FIT"?(training?" 功率含滑行零值，踏频仅计踩踏；NP 至少10分钟且采样充分。爬升为估算。":" 停留时间仅在运动概览统计。"):" 旧记录仅展示历史计算值，不等同移动均速。"}</p>${refresh}</div></section>`;
 }
 function gradeSeries(raw){
  const points=[];
@@ -182,7 +209,7 @@ function gradeChart(a){
 }
 function summaryFields(a){
  const data=analyze(a.cyclingRaw,5),r=data?.overall;
- const fields=[["距离",finite(a.distance)?a.distance.toFixed(2)+" km":"—"],["移动均速",finite(r?.speed)?fmt(r.speed,1)+" km/h":"—"],["移动时间",timeLabel(r?.seconds)],[finite(a.cyclingRaw?.elapsed)?"总耗时":"记录跨度（估算）",timeLabel(r?.elapsed)],["停留时间",timeLabel(r?.stopped)],["计时时间",timeLabel(r?.timer??a.cyclingRaw?.timer??(finite(a.minutes)?a.minutes*60:null))],["平均功率",finite(r?.power)?fmt(r.power)+" W":"—"],["标准化功率",finite(r?.np)?fmt(r.np)+" W":"—"],["平均踏频",finite(r?.cadence)?fmt(r.cadence)+" rpm":"—"],["平均心率",finite(r?.hr)?fmt(r.hr)+" bpm":"—"],["累计爬升",finite(a.gain)?fmt(a.gain)+" m":"—"],["来源",a.source||"—"]];
+ const fields=[["距离",finite(r?.end)?r.end.toFixed(2)+" km":finite(a.distance)?a.distance.toFixed(2)+" km":"—"],["移动均速",finite(r?.speed)?(r.estimated?"≈":"")+fmt(r.speed,1)+" km/h":"—"],["移动时间",finite(r?.seconds)?(r.estimated?"≈":"")+timeLabel(r.seconds):"—"],[finite(a.cyclingRaw?.elapsed)?"总耗时":"记录跨度（估算）",timeLabel(r?.elapsed)],["停留时间",timeLabel(r?.stopped)],["计时时间",timeLabel(r?.timer??a.cyclingRaw?.timer??(finite(a.minutes)?a.minutes*60:null))],["平均功率",finite(r?.power)?fmt(r.power)+" W":"—"],["标准化功率",finite(r?.np)?fmt(r.np)+" W":"—"],["平均踏频",finite(r?.cadence)?fmt(r.cadence)+" rpm":"—"],["平均心率",finite(r?.hr)?fmt(r.hr)+" bpm":"—"],["累计爬升",finite(a.gain)?fmt(a.gain)+" m":"—"],["来源",a.source||"—"]];
  if(!finite(r?.speed)&&finite(a.speed))fields.push(["设备均速（原始）",fmt(a.speed,1)+" km/h"]);if(!finite(r?.power)&&finite(a.cyclingRaw?.power??a.power))fields.push(["设备平均功率（原始）",fmt(a.cyclingRaw?.power??a.power)+" W"]);if(!finite(r?.np)&&finite(a.cyclingRaw?.np))fields.push(["设备 NP（原始）",fmt(a.cyclingRaw.np)+" W"]);
  return fields;
 }

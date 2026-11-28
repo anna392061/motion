@@ -1,6 +1,6 @@
-/* MOTION. v1.4.9 RC — network-first, never caches private activity data. */
-const CACHE='motion-shell-v1-4-9-cycling-rc1';
-const FILES=['./','./index.html','./styles.css','./theme.css','./v14.css?v=1440','./v141.css','./pace-format.js?v=1440','./v14.js?v=1440','./v141.js?v=1440','./runtime.js?v=1450','./app.js?v=20261123-sports','./strength-core.js?v=20261123-leftcheck-v2','./strength-core.css?v=20261123-leftcheck-v2','./performance.css?v=1460','./performance.js?v=1470','./cycling-analytics.js?v=1490','./peach-glow.css?v=20261111','./peach-glow-glass.css?v=20261123-sports2','./sport-icons/run.png','./sport-icons/cycle.png','./sport-icons/strength.png','./sport-icons/tennis.png','./manifest.webmanifest','./icon.svg','./apple-touch-icon.png'];
+/* MOTION. v1.4.9 — network-first, never caches private activity data. */
+const CACHE='motion-shell-v1-4-9-cycling-release1';
+const FILES=['./','./index.html','./styles.css','./theme.css','./v14.css?v=1440','./v141.css','./pace-format.js?v=1440','./v14.js?v=1491','./v141.js?v=1491','./runtime.js?v=1450','./app.js?v=1491','./strength-core.js?v=20261123-leftcheck-v2','./strength-core.css?v=20261123-leftcheck-v2','./performance.css?v=1460','./performance.js?v=1470','./cycling-analytics.js?v=1491','./peach-glow.css?v=20261111','./peach-glow-glass.css?v=20261123-sports2','./sport-icons/run.png','./sport-icons/cycle.png','./sport-icons/strength.png','./sport-icons/tennis.png','./manifest.webmanifest','./icon.svg','./apple-touch-icon.png'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(FILES)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('motion-shell-')&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',event=>{

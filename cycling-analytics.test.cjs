@@ -41,5 +41,18 @@ const count=(function runTests(api){
  test(api.needsRefresh({type:"cycle",cyclingRaw:{version:1,fitBase64:"abc",samples:[[0,0]]}}),"local FIT migration");
  test(api.summaryFields({type:"cycle",cyclingRaw:stop,distance:12,power:999}).find(x=>x[0]==="平均功率")[1]==="100 W","summary uses segment calculation, not device avg");
  test(api.timeLabel(0)==="0:00","zero stop display");
+ 
+ // Reproduce the screenshot's shape with synthetic distances, two sparse areas
+ // and a 16:07 cafe stop. No real FIT measurements are assumed.
+ const ride=[];let timestamp=0,meters=0;const events=[{t:0,action:"start"}];
+ while(meters<31960){
+  ride.push([timestamp,meters,7,90,80,130,25]);
+  if(meters===28000){events.push({t:timestamp,action:"stop"});timestamp+=967;events.push({t:timestamp,action:"start"});ride.push([timestamp,meters,7,90,80,130,25]);}
+  const step=Math.min(7,31960-meters);timestamp+=step/7;meters+=step;
+ }
+ ride.push([timestamp,meters,7,90,80,130,25]);events.push({t:timestamp,action:"stop"});
+ // 28,000 is an exact multiple of 7; stop occurs once.
+ const screen={samples:ride.filter(r=>!(r[1]>12000&&r[1]<12080)&&!(r[1]>22000&&r[1]<22085)),timer:timestamp-967,elapsed:timestamp,events,distance:31960};
+ const screen5=api.analyze(screen,5),screen20=api.analyze(screen,20);test(screen5.rows.length===7&&screen20.rows.length===2,"31.96 km split shape");test(screen5.rows.every(r=>near(r.speed,25.2))&&screen20.rows.every(r=>near(r.speed,25.2)),"screenshot-shaped gaps no blank averages");test(near(screen5.overall.stopped,967)&&near(screen5.overall.seconds,timestamp-967),"16:07 only in overview");
  return count;
 })(api);console.log(count+' cycling assertions passed');

@@ -20,7 +20,7 @@ function archiveFit(buffer){const bytes=new Uint8Array(buffer);let binary="";for
 function fromDecoded(decoded){
  const {rows,route,session,events}=decoded;
  const samples=rows.map(r=>[r.t,safe(r.dist),safe(r.speed,0,100),safe(r.power,0,5000),safe(r.cadence,0,300),safe(r.hr,0,255),safe(r.alt,-1000,10000)]);
- return {version:1,samples,route:route||[],events:events||[],timer:safe(session.totalTimerTime),np:safe(session.normalizedPower,0,5000),cadence:safe(session.avgCadence,0,300),power:safe(session.avgPower,0,5000)};
+ return {version:2,samples,route:route||[],events:events||[],timer:safe(session.totalTimerTime),elapsed:safe(session.totalElapsedTime),distance:safe(session.totalDistance),np:safe(session.normalizedPower,0,5000),cadence:safe(session.avgCadence,0,300),power:safe(session.avgPower,0,5000)};
 }
 function newBucket(start,end){
  return {start,end,seconds:0,powerSum:0,powerTime:0,cadenceSum:0,cadenceTime:0,hrSum:0,hrTime:0,gain:0,gainCount:0,pieces:[],badPower:false};
@@ -58,52 +58,82 @@ function analyze(raw,km){
  const rows=(raw.samples||[]).filter(r=>finite(r[0])&&finite(r[1])).sort((a,b)=>a[0]-b[0]);
  if(rows.length<2)return null;
  const first=rows[0],last=rows.at(-1),total=(last[1]-first[1])/1000,elapsed=last[0]-first[0];
- if(total<=0||elapsed<=0)return null;
- const events=(raw.events||[]).filter(e=>finite(e.t)&&(e.action==="start"||e.action==="stop")).sort((a,b)=>a.t-b.t);
- let active=true,eidx=0;
- while(eidx<events.length&&events[eidx].t<=first[0])active=events[eidx++].action==="start";
- const timerKnown=events.length>0||finite(raw.timer)&&Math.abs(raw.timer-elapsed)<=2;
+ if(total<=0||elapsed<=0||total>2000)return null;
+ const events=(raw.events||[]).filter(e=>finite(e.t)&&["start","stop"].includes(e.action)).sort((a,b)=>a.t-b.t);
  const buckets=Array.from({length:Math.ceil(total/km-1e-10)},(_,i)=>newBucket(i*km,Math.min(total,(i+1)*km)));
- const overall=newBucket(0,total);let wasActive=false,irregular=false,negativeDistance=false,pausedDistance=false;
- // Smooth altitude with a 5-sample median; use 3 m hysteresis to limit jitter.
+ const overall=newBucket(0,total);
+ let active=true,eidx=0,wasMoving=false,negativeDistance=false,irregular=false,activeTime=0;
  const alt=rows.map((r,i)=>{const a=rows.slice(Math.max(0,i-2),i+3).map(x=>x[6]).filter(finite).sort((x,y)=>x-y);return finite(r[6])&&a.length?a[Math.floor(a.length/2)]:null});
- let anchor=alt[0],climb=0,dir=0;
+ let anchor=alt[0];
+ const at=d=>buckets[Math.max(0,Math.min(buckets.length-1,Math.floor((d+1e-9)/km)))];
+ function charge(bucket,key,dt){bucket[key]=(bucket[key]||0)+dt;overall[key]=(overall[key]||0)+dt}
+ while(eidx<events.length&&events[eidx].t<=first[0])active=events[eidx++].action==="start";
  for(let i=1;i<rows.length;i++){
-  const a=rows[i-1],b=rows[i],dt=b[0]-a[0],d0=(a[1]-first[1])/1000,d1=(b[1]-first[1])/1000;
-  if(dt<=0)continue;
-  if(d1<d0){negativeDistance=true;continue}
-  let gain=null;
-  if(finite(alt[i])&&finite(anchor)){
-   const diff=alt[i]-anchor;gain=0;
-   if(diff>=3){gain=diff;climb+=diff;anchor=alt[i];dir=1}
-   else if(diff<=-3){anchor=alt[i];dir=-1}
-  }else if(finite(alt[i]))anchor=alt[i];
-  const cuts=[0,1];
-  if(d1>d0){for(let mark=(Math.floor(d0/km)+1)*km;mark<d1-1e-10;mark+=km)cuts.push((mark-d0)/(d1-d0))}
-  for(let j=eidx;j<events.length&&events[j].t<b[0];j++){if(events[j].t>a[0])cuts.push((events[j].t-a[0])/dt)}
-  cuts.sort((x,y)=>x-y);
-  for(let j=1;j<cuts.length;j++){
-   const lo=cuts[j-1],hi=cuts[j];if(hi-lo<1e-10)continue;
-   const t=a[0]+lo*dt;while(eidx<events.length&&events[eidx].t<=t+1e-7)active=events[eidx++].action==="start";
-   if(timerKnown&&!active){if((d1-d0)*(hi-lo)>.0001)pausedDistance=true;wasActive=false;continue}
-   const mid=d0+(d1-d0)*(lo+hi)/2,idx=Math.min(buckets.length-1,Math.max(0,Math.floor(mid/km)));
-   const valid=dt<=MAX_GAP,sec=dt*(hi-lo),g=finite(gain)?gain*(hi-lo):null;
-   if(dt>2)irregular=true;
-   for(const target of [buckets[idx],overall])addPiece(target,sec,a[3],a[4],a[5],g,!wasActive,valid);
-   wasActive=true;
+  const a=rows[i-1],b=rows[i],dt=b[0]-a[0],d0=(a[1]-first[1])/1000,d1=(b[1]-first[1])/1000,dm=(d1-d0)*1000;
+  if(dt<=0){if(dm!==0)negativeDistance=true;continue}
+  if(dm<-.01){negativeDistance=true;continue}
+  const slices=[];let cursor=a[0];
+  while(eidx<events.length&&events[eidx].t<=cursor)active=events[eidx++].action==="start";
+  while(eidx<events.length&&events[eidx].t<b[0]){
+   const ev=events[eidx++];if(ev.t>cursor)slices.push({dt:ev.t-cursor,active});cursor=ev.t;active=ev.action==="start";
+  }
+  if(b[0]>cursor)slices.push({dt:b[0]-cursor,active});
+  const live=slices.reduce((s,p)=>s+(p.active?p.dt:0),0),paused=dt-live;
+  activeTime+=live;
+  // Distance belongs to active spans only. A paused gap must not dilute speed or create artificial zero power.
+  // If a gap spans a pause, location and sensor values within the active edge cannot be reconstructed exactly.
+  const hasPause=paused>1e-7;
+  const stationary=live>0&&dm/live<=.2&&(!finite(a[2])||a[2]<=.5)&&(!finite(b[2])||b[2]<=.5);
+  const noDistance=live>0&&dm<=.01;
+  const uncertain=(live>MAX_GAP)||(live<=1e-7&&dm>.01)||(live>0&&dm/live>45)||(noDistance&&!stationary);
+  let d=d0;
+  if(live<=1e-7&&dm>.01){charge(at(d),"unknownDistance",dm);for(const bucket of buckets)if(bucket.start<d1&&bucket.end>d0)bucket.badDistance=true;overall.badDistance=true}
+  for(const p of slices){
+   if(!p.active){charge(at(d),"paused",p.dt);wasMoving=false;anchor=null;continue}
+   const end=d+(live>0?(d1-d0)*p.dt/live:0);
+   const stop=stationary&&!uncertain,unknown=uncertain;
+   let gain=null;
+   if(!stop&&!unknown&&!hasPause&&finite(alt[i])&&finite(anchor)){const diff=alt[i]-anchor;gain=0;if(diff>=3){gain=diff;anchor=alt[i]}else if(diff<=-3)anchor=alt[i]}
+   if(!finite(anchor)||stop||unknown||hasPause)anchor=alt[i];
+   const cuts=[d,end];if(end>d)for(let mark=(Math.floor(d/km)+1)*km;mark<end-1e-10;mark+=km)cuts.push(mark);
+   cuts.sort((x,y)=>x-y);
+   for(let j=1;j<cuts.length;j++){
+    const lo=cuts[j-1],hi=cuts[j],sec=end>d?p.dt*(hi-lo)/(end-d):p.dt;
+    if(sec<=0)continue;
+    const bucket=at((lo+hi)/2);
+    if(stop){charge(bucket,"stopped",sec);wasMoving=false;continue}
+    if(unknown){charge(bucket,"unknown",sec);wasMoving=false;continue}
+    // A gap crossing pause cannot carry sensor measurements across the event.
+    const valid=!hasPause&&dt<=MAX_GAP;
+    if(dt>2||hasPause)irregular=true;
+    for(const target of [bucket,overall])addPiece(target,sec,a[3],a[4],a[5],finite(gain)?gain*(sec/p.dt):null,!wasMoving||target.pieces.length===0,valid);
+    wasMoving=true;
+   }
+   d=end;
   }
  }
  if(negativeDistance)return null;
- const timerMismatch=finite(raw.timer)&&Math.abs(overall.seconds-raw.timer)>Math.max(3,raw.timer*.01);
- const reliableTimer=timerKnown&&!timerMismatch&&!pausedDistance;
- // When timing is ambiguous, do not call it moving time or calculate NP from it.
- const allowNP=reliableTimer&&!irregular;
- const result=finish(overall,allowNP);
- if(finite(raw.np))result.np=raw.np;
- if(finite(raw.power))result.power=raw.power;
- if(finite(raw.cadence))result.cadence=raw.cadence;
- if(!reliableTimer){result.np=finite(raw.np)?raw.np:null}
- return {rows:buckets.map(b=>finish(b,allowNP)),overall:result,basis:reliableTimer?"计时器时间":"分段时间估算（计时口径未核实）",reliableTimer,estimated:true,source:"FIT"};
+ const timerMismatch=finite(raw.timer)&&Math.abs(activeTime-raw.timer)>Math.max(3,raw.timer*.01);
+ const timerKnown=events.length>0||finite(raw.timer)&&Math.abs(raw.timer-elapsed)<=2;
+ const reliableTimer=timerKnown&&!timerMismatch&&!overall.badDistance;
+ const sessionDistance=finite(raw.distance)?raw.distance/1000:null;
+ const distanceMismatch=finite(sessionDistance)&&Math.abs(total-sessionDistance)>Math.max(.05,sessionDistance*.005);
+ const edgeElapsed=finite(raw.elapsed)&&raw.elapsed>=elapsed-2?Math.max(elapsed,raw.elapsed):elapsed;
+ const unobserved=Math.max(0,edgeElapsed-elapsed);
+ const reliable=reliableTimer&&!distanceMismatch&&unobserved<=3;
+ const complete=b=>reliable&&!b.badDistance&&!(b.unknown>1e-6)&&!(b.unknownDistance>1e-6);
+ const finishBucket=b=>{
+  const ok=complete(b),r=finish(b,ok&&!irregular);
+  return {...r,seconds:ok?b.seconds:null,speed:ok?r.speed:null,power:ok?r.power:null,np:ok?r.np:null,cadence:ok?r.cadence:null,hr:ok?r.hr:null,gain:ok?r.gain:null,
+   stopped:(b.paused||0)+(b.stopped||0),unknown:b.unknown||0,paused:b.paused||0,stationary:b.stopped||0,elapsed:b.seconds+(b.paused||0)+(b.stopped||0)+(b.unknown||0),complete:ok};
+ };
+ const result=finishBucket(overall),out=buckets.map(finishBucket);
+ result.elapsed=edgeElapsed;result.timer=finite(raw.timer)?raw.timer:reliableTimer?activeTime:null;
+ result.stopped=complete(overall)?result.stopped:null;
+ const sum=key=>out.reduce((s,r)=>s+(r[key]||0),0);
+ const checks={distance:Math.abs(out.reduce((s,r)=>s+r.end-r.start,0)-total)<1e-6,time:Math.abs(sum("elapsed")-elapsed)<.01,timer:reliableTimer,distanceMatchesSession:!distanceMismatch,unobservedSeconds:unobserved,unknownSeconds:overall.unknown||0};
+ if(!checks.time||!checks.distance){for(const r of [...out,result]){r.seconds=r.speed=r.power=r.np=r.cadence=r.hr=null;r.complete=false}}
+ return {rows:out,overall:result,basis:result.complete?"移动时间（排除计时暂停与检测到的停车）":"移动时间无法完整核实，受影响指标不显示",reliableTimer,estimated:true,source:"FIT",checks};
 }
 function legacy(a,km){
  const splits=a.splits||[];if(!splits.length)return null;
@@ -119,7 +149,7 @@ function legacy(a,km){
  return {rows:out,basis:"历史分段时间（可能含暂停）",source:"历史分段",partial:finite(a.distance)&&end<a.distance-.03};
 }
 function results(a,km){return analyze(a.cyclingRaw,km)||legacy(a,km)}
-function timeLabel(s){if(!finite(s)||s<=0)return "—";s=Math.round(s);const h=Math.floor(s/3600),m=Math.floor(s%3600/60),ss=String(s%60).padStart(2,"0");return h?`${h}:${String(m).padStart(2,"0")}:${ss}`:`${m}:${ss}`}
+function timeLabel(s){if(!finite(s)||s<0)return "—";s=Math.round(s);const h=Math.floor(s/3600),m=Math.floor(s%3600/60),ss=String(s%60).padStart(2,"0");return h?`${h}:${String(m).padStart(2,"0")}:${ss}`:`${m}:${ss}`}
 const fmt=(x,d=0)=>finite(x)?x.toFixed(d):"—";
 const labelKm=x=>Number(x.toFixed(2)).toString();
 let selectedKm=5,mode="basic";
